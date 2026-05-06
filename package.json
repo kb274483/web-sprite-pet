@@ -1,0 +1,38 @@
+{
+  "name": "desktop-sprite-pet",
+  "version": "0.1.0",
+  "description": "A lightweight framework-agnostic desktop pet Web Component rendered with canvas.",
+  "type": "module",
+  "main": "./dist/desktop-pet.umd.cjs",
+  "module": "./dist/desktop-pet.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/desktop-pet.js",
+      "require": "./dist/desktop-pet.umd.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --open /examples/html/",
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "preview": "vite preview --host 0.0.0.0",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "web-component",
+    "desktop-pet",
+    "sprite",
+    "canvas",
+    "typescript"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

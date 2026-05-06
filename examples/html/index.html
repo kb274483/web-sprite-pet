@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>desktop-pet HTML Example</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background: #f8fafc;
+        color: #0f172a;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        display: grid;
+        gap: 16px;
+        justify-items: center;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      desktop-pet {
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>desktop-pet</h1>
+      <desktop-pet
+        width="500"
+        height="500"
+        src="assets/cat_sprite.png"
+        cols="6"
+        rows="6"
+        scale="0.5"
+        animation-speed="1"
+      ></desktop-pet>
+    </main>
+
+    <script type="module" src="/src/index.ts"></script>
+  </body>
+</html>
