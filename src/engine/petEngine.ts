@@ -1,5 +1,5 @@
 import { loadSprite } from './spriteLoader'
-import type { PetEngineOptions, PetState, PetEngine, PetSize, PetBounds } from './types'
+import type { AnimationName, PetEngineOptions, PetState, PetEngine, PetSize, PetBounds, PlayAnimationOptions } from './types'
 
 const MOVEMENT_RESPONSE_MS = 120
 const MOVEMENT_STOP_DISTANCE = 0.75
@@ -28,6 +28,9 @@ export function createPetEngine(
     loaded: false,
     error: null,
     animation: 'idle',
+    baseAnimation: 'idle',
+    heldAnimation: null,
+    oneShotAnimation: null,
     frameIndex: 0,
     frameElapsed: 0,
     targetX: pet.x,
@@ -46,6 +49,8 @@ export function createPetEngine(
     setPetAnchor,
     setPetTarget,
     setMovementSpeed,
+    playAnimation,
+    clearHeldAnimation,
   };
 
   async function loadPets(): Promise<void>{
@@ -119,6 +124,38 @@ export function createPetEngine(
     movementSpeed = getClampedMovementSpeed(speed)
   }
 
+  function playAnimation(
+    id: string,
+    animation: AnimationName,
+    playOptions: PlayAnimationOptions = {},
+  ): void {
+    const state = petStates.find((pet) => pet.id === id)
+    if (!state) return
+
+    const mode = playOptions.mode ?? 'hold'
+
+    if (mode === 'once') {
+      state.oneShotAnimation = animation
+      setAnimation(state, animation, true)
+      return
+    }
+
+    state.heldAnimation = animation
+    if (!state.oneShotAnimation) {
+      setAnimation(state, animation)
+    }
+  }
+
+  function clearHeldAnimation(id: string): void {
+    const state = petStates.find((pet) => pet.id === id)
+    if (!state) return
+
+    state.heldAnimation = null
+    if (!state.oneShotAnimation) {
+      setAnimation(state, state.baseAnimation)
+    }
+  }
+
   function getPetSize(id: string): PetSize | null {
     const state = petStates.find((pet) => pet.id === id)
     if (!state?.loaded || !state.image) {
@@ -152,14 +189,7 @@ export function createPetEngine(
     for (const state of petStates) {
       updateMovement(state, delta)
 
-      const animation = options.animations[state.animation]
-      const frameDuration = animation.frameDuration / animationSpeed
-
-      state.frameElapsed += delta
-      while (state.frameElapsed >= frameDuration) {
-        state.frameIndex = (state.frameIndex + 1) % animation.frames
-        state.frameElapsed -= frameDuration
-      }
+      updateAnimationFrame(state, delta, animationSpeed)
     }
   }
 
@@ -178,7 +208,7 @@ export function createPetEngine(
     if (distance <= MOVEMENT_STOP_DISTANCE) {
       state.config.x = target.x
       state.config.y = target.y
-      setAnimation(state, 'idle')
+      setBaseAnimation(state, 'idle')
       return
     }
 
@@ -191,7 +221,7 @@ export function createPetEngine(
       state.config.direction = dx < 0 ? 'left' : 'right'
     }
 
-    setAnimation(state, 'walk')
+    setBaseAnimation(state, 'walk')
   }
 
   function resolveBoundedTarget(state: PetState): { x: number; y: number } {
@@ -215,14 +245,47 @@ export function createPetEngine(
     }
   }
 
-  function setAnimation(state: PetState, animation: PetState['animation']): void {
-    if (state.animation === animation) {
+  function setAnimation(
+    state: PetState,
+    animation: PetState['animation'],
+    forceRestart = false,
+  ): void {
+    if (state.animation === animation && !forceRestart) {
       return
     }
 
     state.animation = animation
     state.frameIndex = 0
     state.frameElapsed = 0
+  }
+
+  function setBaseAnimation(state: PetState, animation: AnimationName): void {
+    state.baseAnimation = animation
+    if (!state.heldAnimation && !state.oneShotAnimation) {
+      setAnimation(state, animation)
+    }
+  }
+
+  function updateAnimationFrame(
+    state: PetState,
+    delta: number,
+    animationSpeed: number,
+  ): void {
+    const animation = options.animations[state.animation]
+    const frameDuration = animation.frameDuration / animationSpeed
+
+    state.frameElapsed += delta
+    while (state.frameElapsed >= frameDuration) {
+      state.frameElapsed -= frameDuration
+
+      if (state.oneShotAnimation && state.frameIndex >= animation.frames - 1) {
+        state.oneShotAnimation = null
+        setAnimation(state, state.heldAnimation ?? state.baseAnimation)
+        continue
+      }
+
+      state.frameIndex = (state.frameIndex + 1) % animation.frames
+    }
   }
 
   function draw(): void {

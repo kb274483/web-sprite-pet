@@ -39,6 +39,9 @@ export type PetState = {
   loaded: boolean
   error: Error | null
   animation: AnimationName
+  baseAnimation: AnimationName
+  heldAnimation: AnimationName | null
+  oneShotAnimation: AnimationName | null
   frameIndex: number
   frameElapsed: number
   targetX: number
@@ -64,6 +67,12 @@ export type PetEngine = {
   setPetAnchor: (id: string, x: number, y: number) => void
   setPetTarget: (id: string, x: number, y: number) => void
   setMovementSpeed: (speed: number) => void
+  playAnimation: (id: string, animation: AnimationName, options?: PlayAnimationOptions) => void
+  clearHeldAnimation: (id: string) => void
+}
+
+export type PlayAnimationOptions = {
+  mode?: 'hold' | 'once'
 }
 
 export type PetDirection = 'right' | 'left'
@@ -115,4 +124,20 @@ export type PetBounds = {
   bottom: number
   width: number
   height: number
+}
+
+export type PetPointerBounds = {
+  left: number
+  top: number
+  right: number
+  bottom: number
+  width: number
+  height: number
+}
+
+export type PetPointerEventDetail = {
+  id: string
+  pointerX: number
+  pointerY: number
+  bounds: PetPointerBounds
 }

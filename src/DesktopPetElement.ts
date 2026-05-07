@@ -2,10 +2,19 @@ import { defaultAnimations } from "./engine/animations";
 import { createPetEngine } from "./engine/petEngine";
 import { readNumberAttribute, readStringAttribute } from "./common/attributes";
 import { resolvePetAnchor } from "./engine/position";
-import type { AnimationMap, PetEngine, FreePetPosition, FloorPetPosition } from "./engine/types";
+import type { 
+  AnimationName,
+  AnimationMap, 
+  PetEngine, 
+  FreePetPosition, 
+  FloorPetPosition, 
+  PetPointerEventDetail, 
+  PetPointerBounds 
+} from "./engine/types";
 
 const DEFAULT_CANVAS_WIDTH = 240
 const DEFAULT_CANVAS_HEIGHT = 180
+const ANIMATION_NAMES = ['idle', 'walk', 'run', 'sleep', 'jump', 'roll', 'attack'] as const
 const PET_DIRECTIONS = ['left', 'right'] as const
 const FREE_PET_POSITIONS = [
   'top-left',
@@ -96,7 +105,7 @@ export class DesktopPetElement extends HTMLElement {
   }
 
   attributeChangedCallback(
-    _name: string,
+    name: string,
     oldValue: string | null,
     newValue: string | null,
   ): void {
@@ -107,6 +116,9 @@ export class DesktopPetElement extends HTMLElement {
     this.syncResizeListener()
     this.syncInteractionListeners()
     this.syncMovementSpeed()
+    if (name === 'hover-animation' && this.isHoveringPet) {
+      this.playHoverAnimation()
+    }
     this.updateLayout()
   }
 
@@ -121,6 +133,8 @@ export class DesktopPetElement extends HTMLElement {
       'interactive',
       'follow-pointer',
       'movement-speed',
+      'hover-animation',
+      'click-animation',
     ]
   }
 
@@ -157,6 +171,7 @@ export class DesktopPetElement extends HTMLElement {
     } else {
       window.removeEventListener('click', this.handleClick)
       this.isHoveringPet = false
+      this.engine?.clearHeldAnimation('default')
     }
   }
 
@@ -175,6 +190,7 @@ export class DesktopPetElement extends HTMLElement {
     if (!detail) {
       if (this.isHoveringPet) {
         this.isHoveringPet = false
+        this.engine?.clearHeldAnimation('default')
         const bounds = this.readViewportPetBounds()
         if (bounds) {
           this.dispatchEvent(new CustomEvent('pet-hover-end', {
@@ -192,6 +208,7 @@ export class DesktopPetElement extends HTMLElement {
 
     if (!this.isHoveringPet) {
       this.isHoveringPet = true
+      this.playHoverAnimation()
       this.dispatchEvent(new CustomEvent('pet-hover-start', { detail }))
     }
   }
@@ -217,6 +234,7 @@ export class DesktopPetElement extends HTMLElement {
       return
     }
 
+    this.playClickAnimation()
     this.dispatchEvent(new CustomEvent('pet-click', { detail }))
   }
 
@@ -325,6 +343,42 @@ export class DesktopPetElement extends HTMLElement {
     })
   }
 
+  private playHoverAnimation(): void {
+    const animation = this.readAnimationAttribute('hover-animation')
+    if (!animation) {
+      this.engine?.clearHeldAnimation('default')
+      return
+    }
+
+    this.engine?.playAnimation('default', animation, { mode: 'hold' })
+  }
+
+  private playClickAnimation(): void {
+    const animation = this.readAnimationAttribute('click-animation')
+    if (!animation) {
+      return
+    }
+
+    this.engine?.playAnimation('default', animation, { mode: 'once' })
+  }
+
+  private readAnimationAttribute(name: string): AnimationName | null {
+    const value = this.getAttribute(name)
+    if (value === null) {
+      return null
+    }
+
+    if (!ANIMATION_NAMES.includes(value as AnimationName)) {
+      console.warn(
+        `<desktop-pet> attribute "${name}" received unsupported value "${value}". ` +
+        `Expected one of: ${ANIMATION_NAMES.join(', ')}.`
+      )
+      return null
+    }
+
+    return value as AnimationName
+  }
+
   private createStyle(): HTMLStyleElement {
     const style = document.createElement('style');
     style.textContent = `
@@ -358,21 +412,7 @@ export class DesktopPetElement extends HTMLElement {
   }
 }
 
-type PetPointerBounds = {
-  left: number
-  top: number
-  right: number
-  bottom: number
-  width: number
-  height: number
-}
 
-type PetPointerEventDetail = {
-  id: string
-  pointerX: number
-  pointerY: number
-  bounds: PetPointerBounds
-}
 
 function isPointInBounds(x: number, y: number, bounds: PetPointerBounds): boolean {
   return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom
