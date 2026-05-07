@@ -1,5 +1,6 @@
 import { defaultAnimations } from "./engine/animations";
 import { createPetEngine } from "./engine/petEngine";
+import { readNumberAttribute } from "./common/attribute";
 import type { PetEngine } from "./engine/types";
 
 const DEFAULT_CANVAS_WIDTH = 240
@@ -19,18 +20,19 @@ export class DesktopPetElement extends HTMLElement {
   }
 
   connectedCallback():void{
-    // Canvas 寬 ＆ 高
-    const width = Number(this.getAttribute('width') || DEFAULT_CANVAS_WIDTH)
-    const height = Number(this.getAttribute('height') || DEFAULT_CANVAS_HEIGHT)
     // 圖片路徑
-    const src = this.getAttribute('src') || ''
+    const src = this.getAttribute('src') ?? ''
+    if(!src) console.warn('<desktop-pet> requires a "src" attribute.')
+    // Canvas 寬 ＆ 高
+    const width = readNumberAttribute(this, 'width', DEFAULT_CANVAS_WIDTH)
+    const height = readNumberAttribute(this, 'height', DEFAULT_CANVAS_HEIGHT)
     // 圖片 Cols & Rows 分別是多少
-    const cols = Number(this.getAttribute('cols')) || 6
-    const rows = Number(this.getAttribute('rows')) || 6
+    const cols = readNumberAttribute(this, 'cols', 6)
+    const rows = readNumberAttribute(this, 'rows', 6)
     // 圖片縮放比例
-    const scale = Number(this.getAttribute('scale')) || 1
+    const scale = readNumberAttribute(this, 'scale', 1)
     // Sprite 動畫速度
-    const animationSpeed = Number(this.getAttribute('animation-speed')) || 1
+    const animationSpeed = readNumberAttribute(this, 'animation-speed', 1)
 
     this.engine = createPetEngine(this.canvas, {
       pets: [
