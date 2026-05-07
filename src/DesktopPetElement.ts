@@ -1,10 +1,11 @@
 import { defaultAnimations } from "./engine/animations";
 import { createPetEngine } from "./engine/petEngine";
-import { readNumberAttribute } from "./common/attributes";
+import { readNumberAttribute, readStringAttribute } from "./common/attributes";
 import type { PetEngine } from "./engine/types";
 
 const DEFAULT_CANVAS_WIDTH = 240
 const DEFAULT_CANVAS_HEIGHT = 180
+const PET_DIRECTIONS = ['left', 'right'] as const
 
 export class DesktopPetElement extends HTMLElement {
   private readonly shadow: ShadowRoot
@@ -36,6 +37,8 @@ export class DesktopPetElement extends HTMLElement {
       min: 0.1,
       max: 10,
     })
+    // Sprite 方向
+    const direction = readStringAttribute(this, 'direction', 'right', PET_DIRECTIONS)
 
     this.engine = createPetEngine(this.canvas, {
       pets: [
@@ -45,7 +48,8 @@ export class DesktopPetElement extends HTMLElement {
           src,
           x: width / 2,
           y: height / 2,
-          scale
+          scale,
+          direction
         },
       ],
       spriteSheet: {

@@ -29,6 +29,7 @@ export type PetConfig = {
   x: number
   y: number
   scale?: number
+  direction?: PetDirection
 }
 
 export type PetState = {
@@ -55,3 +56,5 @@ export type PetEngine = {
   destroy: () => void
   resize: (width: number, height: number) => void
 }
+
+export type PetDirection = 'right' | 'left'

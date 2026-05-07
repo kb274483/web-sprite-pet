@@ -121,18 +121,44 @@ export function createPetEngine(
       const scale = state.config.scale ?? 1
       const frameWidth = options.spriteSheet.frameWidth ?? state.image.width / options.spriteSheet.cols
       const frameHeight = options.spriteSheet.frameHeight ?? state.image.height / options.spriteSheet.rows
+
+      const sourceX = state.frameIndex * frameWidth
+      const sourceY = animation.row * frameHeight
+      const targetWidth = frameWidth * scale
+      const targetHeight = frameHeight * scale
+      const drawX = state.config.x
+      const drawY = state.config.y
+      const direction = state.config.direction ?? 'right'
   
-      ctx?.drawImage(
-        state.image,
-        state.frameIndex * frameWidth,
-        animation.row * frameHeight,
-        frameWidth,
-        frameHeight,
-        state.config.x,
-        state.config.y,
-        frameWidth * scale,
-        frameHeight * scale,
-      )
+      if (!ctx) return console.warn('Missing canvas element')
+      if (direction === 'left') {
+        ctx.save()
+        ctx.scale(-1, 1)
+        ctx.drawImage(
+          state.image,
+          sourceX,
+          sourceY,
+          frameWidth,
+          frameHeight,
+          -drawX - targetWidth,
+          drawY,
+          targetWidth,
+          targetHeight,
+        )
+        ctx.restore()
+      } else {
+        ctx.drawImage(
+          state.image,
+          sourceX,
+          sourceY,
+          frameWidth,
+          frameHeight,
+          drawX,
+          drawY,
+          targetWidth,
+          targetHeight,
+        )
+      }      
     }
   }
   
