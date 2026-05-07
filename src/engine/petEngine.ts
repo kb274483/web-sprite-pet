@@ -1,5 +1,5 @@
 import { loadSprite } from './spriteLoader'
-import type { PetEngineOptions, PetState, PetEngine } from './types'
+import type { PetEngineOptions, PetState, PetEngine, PetSize } from './types'
 
 export function createPetEngine(
   canvas: HTMLCanvasElement,
@@ -33,6 +33,7 @@ export function createPetEngine(
     destroy,
     resize,
     setPetAnchor,
+    getPetSize,
   };
 
   async function loadPets(): Promise<void>{
@@ -41,6 +42,10 @@ export function createPetEngine(
         try{
           state.image = await loadSprite(state.config.src)
           state.loaded = true
+          const size = getPetSize(state.id)
+          if (size) {
+            options.onPetLoad?.(size)
+          }
         }catch(err){
           state.error = err instanceof Error ? err : new Error(String(err)) 
         }
@@ -88,6 +93,15 @@ export function createPetEngine(
     state.config.y = y
   }
 
+  function getPetSize(id: string): PetSize | null {
+    const state = petStates.find((pet) => pet.id === id)
+    if (!state?.loaded || !state.image) {
+      return null
+    }
+
+    return getStateSize(state)
+  }
+
   function tick(time:number): void{
     const delta = time - lastTickTime
     lastTickTime = time
@@ -127,17 +141,21 @@ export function createPetEngine(
       }
   
       const animation = options.animations[state.animation]
-      const scale = state.config.scale ?? 1
-      const frameWidth = options.spriteSheet.frameWidth ?? state.image.width / options.spriteSheet.cols
-      const frameHeight = options.spriteSheet.frameHeight ?? state.image.height / options.spriteSheet.rows
+      const { frameWidth, frameHeight, targetWidth, targetHeight } = getStateSize(state)
 
       const sourceX = state.frameIndex * frameWidth
       const sourceY = animation.row * frameHeight
-      const targetWidth = frameWidth * scale
-      const targetHeight = frameHeight * scale
 
-      const anchorX = state.config.x
-      const anchorY = state.config.y
+      const anchorX = clamp(
+        state.config.x,
+        targetWidth / 2,
+        canvas.clientWidth - targetWidth / 2,
+      )
+      const anchorY = clamp(
+        state.config.y,
+        targetHeight,
+        canvas.clientHeight,
+      )
       const drawX = anchorX - targetWidth / 2
       const drawY = anchorY - targetHeight
 
@@ -173,6 +191,32 @@ export function createPetEngine(
         )
       }      
     }
+  }
+
+  function getStateSize(state: PetState): PetSize {
+    if (!state.image) {
+      throw new Error(`Cannot read size for unloaded pet: ${state.id}`)
+    }
+
+    const scale = state.config.scale ?? 1
+    const frameWidth = options.spriteSheet.frameWidth ?? state.image.width / options.spriteSheet.cols
+    const frameHeight = options.spriteSheet.frameHeight ?? state.image.height / options.spriteSheet.rows
+
+    return {
+      id: state.id,
+      frameWidth,
+      frameHeight,
+      targetWidth: frameWidth * scale,
+      targetHeight: frameHeight * scale,
+    }
+  }
+
+  function clamp(value: number, min: number, max: number): number {
+    if (min > max) {
+      return (min + max) / 2
+    }
+
+    return Math.min(Math.max(value, min), max)
   }
   
 }

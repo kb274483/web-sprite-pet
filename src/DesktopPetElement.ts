@@ -35,37 +35,13 @@ export class DesktopPetElement extends HTMLElement {
   }
 
   connectedCallback():void{
-    const hasCustomWidth = this.hasAttribute('width')
-    const hasCustomHeight = this.hasAttribute('height')
-    const isFullscreen = !hasCustomWidth && !hasCustomHeight
+    const { width, height, isFullscreen } = this.readCanvasSize()
     if (isFullscreen) {
-      window.addEventListener('resize', this.resizeCanvas)
+      window.addEventListener('resize', this.updateLayout)
     }
-    // 地板設定
-    const hasFloor = this.hasAttribute('floor')
-    const floorOffset = readNumberAttribute(this, 'floor-offset', 24, {min:0})
     // 圖片路徑
     const src = this.getAttribute('src') ?? ''
     if(!src) console.warn('<desktop-pet> requires a "src" attribute.')
-    // Canvas 寬 ＆ 高
-    const width = isFullscreen
-      ? window.innerWidth
-      : readNumberAttribute(this, 'width', DEFAULT_CANVAS_WIDTH, { min: 1 })
-
-    const height = isFullscreen
-      ? window.innerHeight
-      : readNumberAttribute(this, 'height', DEFAULT_CANVAS_HEIGHT, { min: 1 })
-    // 寵物錨點
-    const edgePadding = readNumberAttribute(this, 'edge-padding', 24, { min: 0 })
-    const position = this.readPosition(hasFloor)
-    const anchor = resolvePetAnchor({
-      position,
-      canvasWidth: width,
-      canvasHeight: height,
-      edgePadding,
-      hasFloor,
-      floorOffset,
-    })
     // 圖片 Cols & Rows 分別是多少
     const cols = readNumberAttribute(this, 'cols', 6, { min: 1, max: 99 })
     const rows = readNumberAttribute(this, 'rows', 6, { min: 1, max: 99 })
@@ -78,6 +54,7 @@ export class DesktopPetElement extends HTMLElement {
     })
     // Sprite 方向
     const direction = readStringAttribute(this, 'direction', 'right', PET_DIRECTIONS)
+    const anchor = this.resolveCurrentAnchor(width, height)
 
     this.engine = createPetEngine(this.canvas, {
       pets: [
@@ -96,7 +73,10 @@ export class DesktopPetElement extends HTMLElement {
         rows,
       },
       animations: defaultAnimations,
-      animationSpeed
+      animationSpeed,
+      onPetLoad: () => {
+        this.updateLayout()
+      }
     });
 
     this.engine.resize(width, height);
@@ -106,30 +86,51 @@ export class DesktopPetElement extends HTMLElement {
   disconnectedCallback(): void {
     this.engine?.destroy();
     this.engine = null;
-    window.removeEventListener('resize', this.resizeCanvas)
+    window.removeEventListener('resize', this.updateLayout)
   }
 
-  private resizeCanvas = (): void => {
-    const width = window.innerWidth
-    const height = window.innerHeight
-    const hasFloor = this.hasAttribute('floor')
-    const floorOffset = readNumberAttribute(this, 'floor-offset', 24, { min: 0 })
-    const edgePadding = readNumberAttribute(this, 'edge-padding', 24, { min: 0 })
-    const position = this.readPosition(hasFloor)
-  
-    const anchor = resolvePetAnchor({
-      position,
-      canvasWidth: width,
-      canvasHeight: height,
-      edgePadding,
-      hasFloor,
-      floorOffset,
-    })
+  private updateLayout = (): void => {
+    const { width, height } = this.readCanvasSize()
+    const anchor = this.resolveCurrentAnchor(width, height)
   
     this.engine?.resize(width, height)
     this.engine?.setPetAnchor('default', anchor.x, anchor.y)
   }
 
+  private resolveCurrentAnchor(width: number, height: number): { x: number; y: number } {
+    const hasFloor = this.hasAttribute('floor')
+    const floorOffset = readNumberAttribute(this, 'floor-offset', 24, { min: 0 })
+    const edgePadding = readNumberAttribute(this, 'edge-padding', 24, { min: 0 })
+    const position = this.readPosition(hasFloor)
+    const petSize = this.engine?.getPetSize('default')
+  
+    return resolvePetAnchor({
+      position,
+      canvasWidth: width,
+      canvasHeight: height,
+      targetWidth: petSize?.targetWidth ?? 0,
+      targetHeight: petSize?.targetHeight ?? 0,
+      edgePadding,
+      hasFloor,
+      floorOffset,
+    })
+  }
+
+  private readCanvasSize(): { width: number; height: number; isFullscreen: boolean } {
+    const hasCustomWidth = this.hasAttribute('width')
+    const hasCustomHeight = this.hasAttribute('height')
+    const isFullscreen = !hasCustomWidth && !hasCustomHeight
+
+    return {
+      width: isFullscreen
+        ? window.innerWidth
+        : readNumberAttribute(this, 'width', DEFAULT_CANVAS_WIDTH, { min: 1 }),
+      height: isFullscreen
+        ? window.innerHeight
+        : readNumberAttribute(this, 'height', DEFAULT_CANVAS_HEIGHT, { min: 1 }),
+      isFullscreen,
+    }
+  }
 
   private readPosition(hasFloor: boolean): FreePetPosition | FloorPetPosition{
     if(hasFloor){

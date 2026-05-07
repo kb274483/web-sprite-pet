@@ -48,6 +48,7 @@ export type PetEngineOptions = {
   spriteSheet: SpriteSheetConfig
   animations: AnimationMap
   animationSpeed?: number
+  onPetLoad?: (pet: PetSize) => void
 }
 
 export type PetEngine = {
@@ -56,6 +57,7 @@ export type PetEngine = {
   destroy: () => void
   resize: (width: number, height: number) => void
   setPetAnchor: (id: string, x: number, y: number) => void
+  getPetSize: (id: string) => PetSize | null
 }
 
 export type PetDirection = 'right' | 'left'
@@ -79,6 +81,8 @@ export type ResolvePetAnchorOptions = {
   position: FreePetPosition | FloorPetPosition
   canvasWidth: number
   canvasHeight: number
+  targetWidth: number
+  targetHeight: number
   edgePadding: number
   hasFloor: boolean
   floorOffset: number
@@ -87,4 +91,12 @@ export type ResolvePetAnchorOptions = {
 export type PetAnchor = {
   x: number
   y: number
+}
+
+export type PetSize = {
+  id: string
+  frameWidth: number
+  frameHeight: number
+  targetWidth: number
+  targetHeight: number
 }
