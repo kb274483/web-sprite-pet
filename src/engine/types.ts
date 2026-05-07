@@ -55,6 +55,36 @@ export type PetEngine = {
   stop: () => void
   destroy: () => void
   resize: (width: number, height: number) => void
+  setPetAnchor: (id: string, x: number, y: number) => void
 }
 
 export type PetDirection = 'right' | 'left'
+
+export type FreePetPosition =
+  | 'top-left'
+  | 'top'
+  | 'top-right'
+  | 'left'
+  | 'center'
+  | 'right'
+  | 'bottom-left'
+  | 'bottom'
+  | 'bottom-right'
+
+export type FloorPetPosition = 'left' | 'center' | 'right'
+
+export type PetPosition = FreePetPosition | FloorPetPosition
+
+export type ResolvePetAnchorOptions = {
+  position: FreePetPosition | FloorPetPosition
+  canvasWidth: number
+  canvasHeight: number
+  edgePadding: number
+  hasFloor: boolean
+  floorOffset: number
+}
+
+export type PetAnchor = {
+  x: number
+  y: number
+}

@@ -32,6 +32,7 @@ export function createPetEngine(
     stop,
     destroy,
     resize,
+    setPetAnchor,
   };
 
   async function loadPets(): Promise<void>{
@@ -77,6 +78,14 @@ export function createPetEngine(
     canvas.style.height = `${height}px`
 
     ctx?.setTransform(ratio, 0,0, ratio, 0,0,)
+  }
+
+  function setPetAnchor(id: string, x: number, y: number): void{
+    const state = petStates.find((pet)=> pet.id === id)
+    if(!state) return
+
+    state.config.x = x
+    state.config.y = y
   }
 
   function tick(time:number): void{
@@ -126,8 +135,12 @@ export function createPetEngine(
       const sourceY = animation.row * frameHeight
       const targetWidth = frameWidth * scale
       const targetHeight = frameHeight * scale
-      const drawX = state.config.x
-      const drawY = state.config.y
+
+      const anchorX = state.config.x
+      const anchorY = state.config.y
+      const drawX = anchorX - targetWidth / 2
+      const drawY = anchorY - targetHeight
+
       const direction = state.config.direction ?? 'right'
   
       if (!ctx) return console.warn('Missing canvas element')
