@@ -23,8 +23,13 @@ export function readNumberAttribute(
   if (value === null) return fallback
   
   const numberValue = Number(value)
-  if (!Number.isFinite(numberValue)) return fallback
-  
+  if (!Number.isFinite(numberValue)) {
+    console.warn(
+      `Attribute "${name}" received invalid number "${value}". ` +
+      `Falling back to ${fallback}.`
+    )
+    return fallback
+  }
   return clamp(numberValue, options.min, options.max)
 }
 
@@ -36,7 +41,13 @@ export function readStringAttribute<T extends string>(
 ): T {
   const value = element.getAttribute(name)
   if(value === null) return fallback
-  if(!allowedValues.includes(value as T)) return fallback
+  if(!allowedValues.includes(value as T)) {
+    console.error(
+      `Attribute "${name}" received unsupported value "${value}". ` +
+      `Expected one of: ${allowedValues.join(', ')}. Falling back to "${fallback}".`
+    )
+    return fallback
+  }
 
   return value as T
 }

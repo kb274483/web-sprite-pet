@@ -32,10 +32,6 @@
         font-weight: 700;
       }
 
-      desktop-pet {
-        border: 1px solid #cbd5e1;
-        /* background: #ffffff; */
-      }
     </style>
   </head>
   <body>
@@ -49,17 +45,19 @@
         scale="0.5"
         animation-speed="1"
         direction="left"
-        position="top-right"
+        floor
+        floor-offset="100"
+        position="right"
         edge-padding="20"
       ></desktop-pet>
     </main>
 
     <script type="module" src="/src/index.ts"></script>
     <script>
-      setTimeout(()=>{
-        let pet = document.querySelector('#desktop-pet')
-        pet.setAttribute('position', 'bottom')
-      },10000)
+      // setTimeout(()=>{
+      //   let pet = document.querySelector('#desktop-pet')
+      //   pet.setAttribute('position', 'center')
+      // },10000)
     </script>
   </body>
 </html>
