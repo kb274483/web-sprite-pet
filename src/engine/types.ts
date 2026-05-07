@@ -41,6 +41,8 @@ export type PetState = {
   animation: AnimationName
   frameIndex: number
   frameElapsed: number
+  targetX: number
+  targetY: number
 }
 
 export type PetEngineOptions = {
@@ -48,6 +50,7 @@ export type PetEngineOptions = {
   spriteSheet: SpriteSheetConfig
   animations: AnimationMap
   animationSpeed?: number
+  movementSpeed?: number
   onPetLoad?: (pet: PetSize) => void
 }
 
@@ -56,8 +59,11 @@ export type PetEngine = {
   stop: () => void
   destroy: () => void
   resize: (width: number, height: number) => void
-  setPetAnchor: (id: string, x: number, y: number) => void
   getPetSize: (id: string) => PetSize | null
+  getPetBounds: (id: string) => PetBounds | null
+  setPetAnchor: (id: string, x: number, y: number) => void
+  setPetTarget: (id: string, x: number, y: number) => void
+  setMovementSpeed: (speed: number) => void
 }
 
 export type PetDirection = 'right' | 'left'
@@ -99,4 +105,14 @@ export type PetSize = {
   frameHeight: number
   targetWidth: number
   targetHeight: number
+}
+
+export type PetBounds = {
+  id: string
+  left: number
+  top: number
+  right: number
+  bottom: number
+  width: number
+  height: number
 }

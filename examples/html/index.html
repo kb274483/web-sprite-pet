@@ -40,13 +40,11 @@
       <desktop-pet
         id="desktop-pet"
         src="assets/cat_sprite.png"
-        cols="6"
-        rows="6"
         scale="0.5"
         animation-speed="1"
         direction="left"
-        floor
-        floor-offset="100"
+        idle-row="0"
+        walk-row="1"
         position="right"
         edge-padding="20"
       ></desktop-pet>
@@ -54,10 +52,19 @@
 
     <script type="module" src="/src/index.ts"></script>
     <script>
-      // setTimeout(()=>{
-      //   let pet = document.querySelector('#desktop-pet')
-      //   pet.setAttribute('position', 'center')
-      // },10000)
+      const pet = document.querySelector('#desktop-pet')
+
+      pet?.addEventListener('pet-hover-start', (event) => {
+        console.log('pet-hover-start', event.detail)
+      })
+
+      pet?.addEventListener('pet-hover-end', (event) => {
+        console.log('pet-hover-end', event.detail)
+      })
+
+      pet?.addEventListener('pet-click', (event) => {
+        console.log('pet-click', event.detail)
+      })
     </script>
   </body>
 </html>

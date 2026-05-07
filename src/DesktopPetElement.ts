@@ -2,7 +2,7 @@ import { defaultAnimations } from "./engine/animations";
 import { createPetEngine } from "./engine/petEngine";
 import { readNumberAttribute, readStringAttribute } from "./common/attributes";
 import { resolvePetAnchor } from "./engine/position";
-import type { PetEngine, FreePetPosition, FloorPetPosition } from "./engine/types";
+import type { AnimationMap, PetEngine, FreePetPosition, FloorPetPosition } from "./engine/types";
 
 const DEFAULT_CANVAS_WIDTH = 240
 const DEFAULT_CANVAS_HEIGHT = 180
@@ -25,6 +25,7 @@ export class DesktopPetElement extends HTMLElement {
   private readonly shadow: ShadowRoot
   private readonly canvas: HTMLCanvasElement
   private engine: PetEngine | null = null
+  private isHoveringPet = false
 
   constructor(){
     super()
@@ -43,6 +44,7 @@ export class DesktopPetElement extends HTMLElement {
     // 圖片 Cols & Rows 分別是多少
     const cols = readNumberAttribute(this, 'cols', 6, { min: 1, max: 99 })
     const rows = readNumberAttribute(this, 'rows', 6, { min: 1, max: 99 })
+    const animations = this.readAnimations(rows)
     // 圖片縮放比例
     const scale = readNumberAttribute(this, 'scale', 1, { min: 0.1, max: 10 })
     // Sprite 動畫速度
@@ -50,6 +52,7 @@ export class DesktopPetElement extends HTMLElement {
       min: 0.1,
       max: 10,
     })
+    const movementSpeed = this.readMovementSpeed()
     // Sprite 方向
     const direction = readStringAttribute(this, 'direction', 'right', PET_DIRECTIONS)
     const anchor = this.resolveCurrentAnchor(width, height)
@@ -70,14 +73,16 @@ export class DesktopPetElement extends HTMLElement {
         cols,
         rows,
       },
-      animations: defaultAnimations,
+      animations,
       animationSpeed,
+      movementSpeed,
       onPetLoad: () => {
         this.updateLayout()
       }
     });
 
     this.engine.resize(width, height);
+    this.syncInteractionListeners()
     this.engine.start();
   }
 
@@ -85,6 +90,9 @@ export class DesktopPetElement extends HTMLElement {
     this.engine?.destroy();
     this.engine = null;
     window.removeEventListener('resize', this.updateLayout)
+    window.removeEventListener('pointermove', this.handlePointerMove)
+    window.removeEventListener('click', this.handleClick)
+    this.isHoveringPet = false
   }
 
   attributeChangedCallback(
@@ -97,6 +105,8 @@ export class DesktopPetElement extends HTMLElement {
     }
 
     this.syncResizeListener()
+    this.syncInteractionListeners()
+    this.syncMovementSpeed()
     this.updateLayout()
   }
 
@@ -108,6 +118,9 @@ export class DesktopPetElement extends HTMLElement {
       'edge-padding',
       'width',
       'height',
+      'interactive',
+      'follow-pointer',
+      'movement-speed',
     ]
   }
 
@@ -126,6 +139,116 @@ export class DesktopPetElement extends HTMLElement {
       window.addEventListener('resize', this.updateLayout)
     } else {
       window.removeEventListener('resize', this.updateLayout)
+    }
+  }
+
+  private syncInteractionListeners(): void {
+    const needsPointerMove = this.hasAttribute('interactive') || this.hasAttribute('follow-pointer')
+
+    if (needsPointerMove) {
+      window.addEventListener('pointermove', this.handlePointerMove)
+    } else {
+      window.removeEventListener('pointermove', this.handlePointerMove)
+      this.isHoveringPet = false
+    }
+
+    if (this.hasAttribute('interactive')) {
+      window.addEventListener('click', this.handleClick)
+    } else {
+      window.removeEventListener('click', this.handleClick)
+      this.isHoveringPet = false
+    }
+  }
+
+  private syncMovementSpeed(): void {
+    this.engine?.setMovementSpeed(this.readMovementSpeed())
+  }
+
+  private handlePointerMove = (event: PointerEvent): void => {
+    this.updateFollowTarget(event)
+
+    if (!this.hasAttribute('interactive')) {
+      return
+    }
+
+    const detail = this.readPetPointerEventDetail(event)
+    if (!detail) {
+      if (this.isHoveringPet) {
+        this.isHoveringPet = false
+        const bounds = this.readViewportPetBounds()
+        if (bounds) {
+          this.dispatchEvent(new CustomEvent('pet-hover-end', {
+            detail: {
+              id: 'default',
+              pointerX: event.clientX,
+              pointerY: event.clientY,
+              bounds,
+            },
+          }))
+        }
+      }
+      return
+    }
+
+    if (!this.isHoveringPet) {
+      this.isHoveringPet = true
+      this.dispatchEvent(new CustomEvent('pet-hover-start', { detail }))
+    }
+  }
+
+  private updateFollowTarget(event: PointerEvent): void {
+    if (!this.hasAttribute('follow-pointer')) {
+      return
+    }
+
+    const canvasRect = this.canvas.getBoundingClientRect()
+    const { height } = this.readCanvasSize()
+    const hasFloor = this.hasAttribute('floor')
+    const floorOffset = readNumberAttribute(this, 'floor-offset', 24, { min: 0 })
+    const targetX = event.clientX - canvasRect.left
+    const targetY = hasFloor ? height - floorOffset : event.clientY - canvasRect.top
+
+    this.engine?.setPetTarget('default', targetX, targetY)
+  }
+
+  private handleClick = (event: MouseEvent): void => {
+    const detail = this.readPetPointerEventDetail(event)
+    if (!detail) {
+      return
+    }
+
+    this.dispatchEvent(new CustomEvent('pet-click', { detail }))
+  }
+
+  private readPetPointerEventDetail(event: MouseEvent | PointerEvent): PetPointerEventDetail | null {
+    const bounds = this.readViewportPetBounds()
+    if (!bounds || !isPointInBounds(event.clientX, event.clientY, bounds)) {
+      return null
+    }
+
+    return {
+      id: 'default',
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      bounds,
+    }
+  }
+
+  private readViewportPetBounds(): PetPointerBounds | null {
+    const bounds = this.engine?.getPetBounds('default')
+    if (!bounds) {
+      return null
+    }
+
+    const canvasRect = this.canvas.getBoundingClientRect()
+
+    return {
+      left: canvasRect.left + bounds.left,
+      top: canvasRect.top + bounds.top,
+      right: canvasRect.left + bounds.right,
+      bottom: canvasRect.top + bounds.bottom,
+      width: bounds.width,
+      height: bounds.height,
     }
   }
 
@@ -171,6 +294,37 @@ export class DesktopPetElement extends HTMLElement {
     return readStringAttribute(this, 'position', 'bottom-right', FREE_PET_POSITIONS)
   }
 
+  private readAnimations(rows: number): AnimationMap {
+    const maxRow = Math.max(rows - 1, 0)
+    const idleRow = readNumberAttribute(this, 'idle-row', defaultAnimations.idle.row, {
+      min: 0,
+      max: maxRow,
+    })
+    const walkRow = readNumberAttribute(this, 'walk-row', defaultAnimations.walk.row, {
+      min: 0,
+      max: maxRow,
+    })
+
+    return {
+      ...defaultAnimations,
+      idle: {
+        ...defaultAnimations.idle,
+        row: idleRow,
+      },
+      walk: {
+        ...defaultAnimations.walk,
+        row: walkRow,
+      },
+    }
+  }
+
+  private readMovementSpeed(): number {
+    return readNumberAttribute(this, 'movement-speed', 1, {
+      min: 0.1,
+      max: 5,
+    })
+  }
+
   private createStyle(): HTMLStyleElement {
     const style = document.createElement('style');
     style.textContent = `
@@ -202,4 +356,24 @@ export class DesktopPetElement extends HTMLElement {
     `;
     return style;
   }
+}
+
+type PetPointerBounds = {
+  left: number
+  top: number
+  right: number
+  bottom: number
+  width: number
+  height: number
+}
+
+type PetPointerEventDetail = {
+  id: string
+  pointerX: number
+  pointerY: number
+  bounds: PetPointerBounds
+}
+
+function isPointInBounds(x: number, y: number, bounds: PetPointerBounds): boolean {
+  return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom
 }
