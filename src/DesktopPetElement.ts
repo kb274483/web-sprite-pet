@@ -35,10 +35,8 @@ export class DesktopPetElement extends HTMLElement {
   }
 
   connectedCallback():void{
-    const { width, height, isFullscreen } = this.readCanvasSize()
-    if (isFullscreen) {
-      window.addEventListener('resize', this.updateLayout)
-    }
+    const { width, height } = this.readCanvasSize()
+    this.syncResizeListener()
     // 圖片路徑
     const src = this.getAttribute('src') ?? ''
     if(!src) console.warn('<desktop-pet> requires a "src" attribute.')
@@ -89,12 +87,46 @@ export class DesktopPetElement extends HTMLElement {
     window.removeEventListener('resize', this.updateLayout)
   }
 
+  attributeChangedCallback(
+    _name: string,
+    oldValue: string | null,
+    newValue: string | null,
+  ): void {
+    if (oldValue === newValue || !this.isConnected) {
+      return
+    }
+
+    this.syncResizeListener()
+    this.updateLayout()
+  }
+
+  static get observedAttributes() {
+    return [
+      'position',
+      'floor',
+      'floor-offset',
+      'edge-padding',
+      'width',
+      'height',
+    ]
+  }
+
   private updateLayout = (): void => {
     const { width, height } = this.readCanvasSize()
     const anchor = this.resolveCurrentAnchor(width, height)
   
     this.engine?.resize(width, height)
     this.engine?.setPetAnchor('default', anchor.x, anchor.y)
+  }
+
+  private syncResizeListener(): void {
+    const { isFullscreen } = this.readCanvasSize()
+
+    if (isFullscreen) {
+      window.addEventListener('resize', this.updateLayout)
+    } else {
+      window.removeEventListener('resize', this.updateLayout)
+    }
   }
 
   private resolveCurrentAnchor(width: number, height: number): { x: number; y: number } {

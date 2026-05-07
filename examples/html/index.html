@@ -42,6 +42,7 @@
     <main>
       <h1>desktop-pet</h1>
       <desktop-pet
+        id="desktop-pet"
         src="assets/cat_sprite.png"
         cols="6"
         rows="6"
@@ -54,5 +55,11 @@
     </main>
 
     <script type="module" src="/src/index.ts"></script>
+    <script>
+      setTimeout(()=>{
+        let pet = document.querySelector('#desktop-pet')
+        pet.setAttribute('position', 'bottom')
+      },10000)
+    </script>
   </body>
 </html>
