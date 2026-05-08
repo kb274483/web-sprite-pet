@@ -12,6 +12,7 @@ import {
 } from "./DesktopPetElement.config";
 import { resolvePetAnchor } from "./engine/position";
 import type { 
+  AnimationMap,
   PetEngine, 
   PetPointerEventDetail, 
   PetPointerBounds 
@@ -23,6 +24,7 @@ export class DesktopPetElement extends HTMLElement {
   private readonly shadow: ShadowRoot
   private readonly canvas: HTMLCanvasElement
   private engine: PetEngine | null = null
+  private customAnimations: AnimationMap | null = null
   private isHoveringPet = false
 
   constructor(){
@@ -33,61 +35,22 @@ export class DesktopPetElement extends HTMLElement {
     this.shadow.append(createDesktopPetStyle(), this.canvas)
   }
 
+  get animations(): AnimationMap | null {
+    return this.customAnimations
+  }
+
+  set animations(animations: AnimationMap | null) {
+    this.customAnimations = animations
+    if (this.isConnected) {
+      this.createEngine()
+    }
+  }
+
   connectedCallback():void{
-    const { width, height } = readCanvasSize(this)
+    this.upgradeProperty('animations')
     this.syncResizeListener()
-
-    // Sprite 圖片路徑是必要的，沒有的話 engine 會載不到圖
-    const src = this.getAttribute('src') ?? ''
-    if(!src) console.warn('<desktop-pet> requires a "src" attribute.')
-
-    // Sprite sheet 用幾欄幾列切圖，預設先走目前範例的 6x6
-    const cols = readNumberAttribute(this, 'cols', 6, { min: 1, max: 99 })
-    const rows = readNumberAttribute(this, 'rows', 6, { min: 1, max: 99 })
-    const animations = readAnimations(this, rows)
-
-    // 實際畫到 canvas 上的縮放比例
-    const scale = readNumberAttribute(this, 'scale', 1, { min: 0.1, max: 10 })
-
-    // Sprite 換幀速度，movement 速度另外處理
-    const animationSpeed = readNumberAttribute(this, 'animation-speed', 1, {
-      min: 0.1,
-      max: 10,
-    })
-    const movementSpeed = readMovementSpeed(this)
-
-    // 初始面向，後續 follow-pointer 移動時 engine 可能會自動翻方向
-    const direction = readDirection(this)
-    const anchor = this.resolveCurrentAnchor(width, height)
-
-    this.engine = createPetEngine(this.canvas, {
-      pets: [
-        {
-          id: DEFAULT_PET_ID,
-          name: 'Default Pet',
-          src,
-          x: anchor.x,
-          y: anchor.y,
-          scale,
-          direction
-        },
-      ],
-      spriteSheet: {
-        cols,
-        rows,
-      },
-      animations,
-      animationSpeed,
-      movementSpeed,
-      onPetLoad: () => {
-        // 圖片載入後才知道真正尺寸，所以要再算一次初始位置
-        this.updateLayout()
-      }
-    });
-
-    this.engine.resize(width, height);
+    this.createEngine()
     this.syncInteractionListeners()
-    this.engine.start();
   }
 
   disconnectedCallback(): void {
@@ -131,6 +94,76 @@ export class DesktopPetElement extends HTMLElement {
       'hover-animation',
       'click-animation',
     ]
+  }
+
+  private upgradeProperty(name: 'animations'): void {
+    if (!Object.prototype.hasOwnProperty.call(this, name)) {
+      return
+    }
+
+    const instance = this as Partial<Record<'animations', AnimationMap | null>>
+    const value = instance[name] ?? null
+    delete instance[name]
+    this[name] = value
+  }
+
+  private createEngine(): void {
+    this.engine?.destroy()
+    this.engine = null
+    this.isHoveringPet = false
+
+    const { width, height } = readCanvasSize(this)
+
+    // Sprite 圖片路徑是必要的，沒有的話 engine 會載不到圖
+    const src = this.getAttribute('src') ?? ''
+    if(!src) console.warn('<desktop-pet> requires a "src" attribute.')
+
+    // Sprite sheet 用幾欄幾列切圖，預設先走目前範例的 6x6
+    const cols = readNumberAttribute(this, 'cols', 6, { min: 1, max: 99 })
+    const rows = readNumberAttribute(this, 'rows', 6, { min: 1, max: 99 })
+    const animations = this.customAnimations ?? readAnimations(this, rows)
+
+    // 實際畫到 canvas 上的縮放比例
+    const scale = readNumberAttribute(this, 'scale', 1, { min: 0.1, max: 10 })
+
+    // Sprite 換幀速度，movement 速度另外處理
+    const animationSpeed = readNumberAttribute(this, 'animation-speed', 1, {
+      min: 0.1,
+      max: 10,
+    })
+    const movementSpeed = readMovementSpeed(this)
+
+    // 初始面向，後續 follow-pointer 移動時 engine 可能會自動翻方向
+    const direction = readDirection(this)
+    const anchor = this.resolveCurrentAnchor(width, height)
+
+    this.engine = createPetEngine(this.canvas, {
+      pets: [
+        {
+          id: DEFAULT_PET_ID,
+          name: 'Default Pet',
+          src,
+          x: anchor.x,
+          y: anchor.y,
+          scale,
+          direction
+        },
+      ],
+      spriteSheet: {
+        cols,
+        rows,
+      },
+      animations,
+      animationSpeed,
+      movementSpeed,
+      onPetLoad: () => {
+        // 圖片載入後才知道真正尺寸，所以要再算一次初始位置
+        this.updateLayout()
+      }
+    });
+
+    this.engine.resize(width, height);
+    this.engine.start();
   }
 
   private updateLayout = (): void => {

@@ -55,8 +55,9 @@
       ></desktop-pet>
     </main>
 
-    <script type="module" src="/src/index.ts"></script>
-    <script>
+    <script type="module">
+      import '/src/index.ts'
+
       const pet = document.querySelector('#desktop-pet')
 
       pet?.addEventListener('pet-hover-start', (event) => {
