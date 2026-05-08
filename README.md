@@ -48,7 +48,7 @@ npm install desktop-sprite-pet
 | `animation-speed` | `1` | Animation speed multiplier. `1` is base speed, `2` is faster, `0.5` is slower. |
 | `movement-speed` | `1` | Follow movement speed multiplier. |
 | `follow-pointer` | off | Moves the pet toward the pointer. |
-| `follow-distance` | `24` | Distance in CSS pixels to keep between the pet anchor and pointer while following. |
+| `follow-distance` | `32` | Distance in CSS pixels to keep between the pet anchor and pointer while following. |
 | `interactive` | off | Enables hover and click hit testing. |
 | `hover-animation` | none | Animation to hold while the pointer is over the pet. |
 | `click-animation` | none | Animation to play once when the pet is clicked. |

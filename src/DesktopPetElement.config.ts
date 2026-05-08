@@ -97,7 +97,7 @@ export function readMovementSpeed(element: HTMLElement): number {
 }
 
 export function readFollowDistance(element: HTMLElement): number {
-  return readNumberAttribute(element, 'follow-distance', 24, {
+  return readNumberAttribute(element, 'follow-distance', 32, {
     min: 0,
     max: 512,
   })
