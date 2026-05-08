@@ -4,8 +4,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: 'src/index.ts',
-      name: 'DesktopPet',
-      fileName: (format) => (format === 'es' ? 'desktop-pet.js' : 'desktop-pet.umd.cjs'),
+      name: 'WebSpritePet',
+      fileName: (format) => (format === 'es' ? 'web-sprite-pet.js' : 'web-sprite-pet.umd.cjs'),
       formats: ['es', 'umd'],
     },
     rollupOptions: {

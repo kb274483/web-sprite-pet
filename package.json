@@ -1,16 +1,16 @@
 {
-  "name": "desktop-sprite-pet",
+  "name": "web-sprite-pet",
   "version": "0.1.0",
-  "description": "A lightweight framework-agnostic desktop pet Web Component rendered with canvas.",
+  "description": "A lightweight framework-agnostic web sprite pet Web Component rendered with canvas.",
   "type": "module",
-  "main": "./dist/desktop-pet.umd.cjs",
-  "module": "./dist/desktop-pet.js",
+  "main": "./dist/web-sprite-pet.umd.cjs",
+  "module": "./dist/web-sprite-pet.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/desktop-pet.js",
-      "require": "./dist/desktop-pet.umd.cjs"
+      "import": "./dist/web-sprite-pet.js",
+      "require": "./dist/web-sprite-pet.umd.cjs"
     }
   },
   "files": [
@@ -25,7 +25,7 @@
   },
   "keywords": [
     "web-component",
-    "desktop-pet",
+    "web-sprite-pet",
     "sprite",
     "canvas",
     "typescript"

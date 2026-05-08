@@ -1,6 +1,6 @@
-# desktop-sprite-pet 中文文件
+# web-sprite-pet 中文文件
 
-`desktop-sprite-pet` 是一個輕量、與框架無關的 Web Component，用 canvas 和 sprite sheet 繪製桌面寵物。
+`web-sprite-pet` 是一個輕量、與框架無關的 Web Component，用 canvas 和 sprite sheet 繪製網頁 sprite 寵物。
 
 它可以用在純 HTML、Vue、Nuxt、React，或任何支援原生 Web Components 的前端環境。
 
@@ -18,29 +18,29 @@
 ## 安裝
 
 ```bash
-npm install desktop-sprite-pet
+npm install web-sprite-pet
 ```
 
 ## 基本使用
 
 ```html
 <script type="module">
-  import 'desktop-sprite-pet'
+  import 'web-sprite-pet'
 </script>
 
-<desktop-pet
+<web-sprite-pet
   src="/sprites/cat_sprite.png"
   cols="6"
   rows="6"
   scale="0.5"
   animation-speed="1"
-></desktop-pet>
+></web-sprite-pet>
 ```
 
 ## 互動使用
 
 ```html
-<desktop-pet
+<web-sprite-pet
   src="/sprites/cat_sprite.png"
   cols="6"
   rows="6"
@@ -52,7 +52,7 @@ npm install desktop-sprite-pet
   movement-speed="1"
   hover-animation="sleep"
   click-animation="roll"
-></desktop-pet>
+></web-sprite-pet>
 ```
 
 ## 使用 JavaScript 自訂動畫
@@ -60,15 +60,15 @@ npm install desktop-sprite-pet
 如果需要完整自訂 animation map，可以設定 `animations` JavaScript property：
 
 ```html
-<desktop-pet
+<web-sprite-pet
   id="pet"
   src="/sprites/cat_sprite.png"
   cols="8"
   rows="7"
-></desktop-pet>
+></web-sprite-pet>
 
 <script type="module">
-  import 'desktop-sprite-pet'
+  import 'web-sprite-pet'
 
   const pet = document.querySelector('#pet')
 
@@ -150,7 +150,7 @@ follow-distance
 hover-animation
 ```
 
-其他屬性會在元件初始化時讀取。如果需要變更其他屬性，請重新建立 `<desktop-pet>` 元素。
+其他屬性會在元件初始化時讀取。如果需要變更其他屬性，請重新建立 `<web-sprite-pet>` 元素。
 
 ## 位置設定
 
@@ -183,17 +183,17 @@ right
 加上 `follow-pointer` 後，寵物會朝滑鼠移動：
 
 ```html
-<desktop-pet src="/sprites/cat_sprite.png" follow-pointer></desktop-pet>
+<web-sprite-pet src="/sprites/cat_sprite.png" follow-pointer></web-sprite-pet>
 ```
 
 可以用 `follow-distance` 控制寵物和滑鼠之間的距離：
 
 ```html
-<desktop-pet
+<web-sprite-pet
   src="/sprites/cat_sprite.png"
   follow-pointer
   follow-distance="48"
-></desktop-pet>
+></web-sprite-pet>
 ```
 
 如果同時啟用 `interactive`，當滑鼠已經在寵物 bounds 內時，follow target 會暫停更新。這可以避免寵物在 hover 或 click 觸發前一直往外移動。
@@ -203,13 +203,13 @@ right
 加上 `interactive` 後，可以監聽互動事件：
 
 ```html
-<desktop-pet
+<web-sprite-pet
   id="pet"
   src="/sprites/cat_sprite.png"
   interactive
   hover-animation="sleep"
   click-animation="roll"
-></desktop-pet>
+></web-sprite-pet>
 
 <script>
   const pet = document.querySelector('#pet')
@@ -292,9 +292,9 @@ npm run build
 
 建置結果會輸出 ESM、UMD 和 TypeScript declarations 到 `dist/`。
 
-# desktop-sprite-pet
+# web-sprite-pet
 
-A lightweight, framework-agnostic Web Component for rendering animated desktop pets with canvas and sprite sheets.
+A lightweight, framework-agnostic Web Component for rendering animated web sprite pets with canvas and sprite sheets.
 
 The package works in plain HTML, Vue, Nuxt, React, or any frontend environment that supports native Web Components.
 
@@ -312,29 +312,29 @@ The package works in plain HTML, Vue, Nuxt, React, or any frontend environment t
 ## Installation
 
 ```bash
-npm install desktop-sprite-pet
+npm install web-sprite-pet
 ```
 
 ## Basic Usage
 
 ```html
 <script type="module">
-  import 'desktop-sprite-pet'
+  import 'web-sprite-pet'
 </script>
 
-<desktop-pet
+<web-sprite-pet
   src="/sprites/cat_sprite.png"
   cols="6"
   rows="6"
   scale="0.5"
   animation-speed="1"
-></desktop-pet>
+></web-sprite-pet>
 ```
 
 ## Interactive Usage
 
 ```html
-<desktop-pet
+<web-sprite-pet
   src="/sprites/cat_sprite.png"
   cols="6"
   rows="6"
@@ -346,7 +346,7 @@ npm install desktop-sprite-pet
   movement-speed="1"
   hover-animation="sleep"
   click-animation="roll"
-></desktop-pet>
+></web-sprite-pet>
 ```
 
 ## Custom Animations With JavaScript
@@ -354,15 +354,15 @@ npm install desktop-sprite-pet
 For full animation map customization, set the `animations` JavaScript property:
 
 ```html
-<desktop-pet
+<web-sprite-pet
   id="pet"
   src="/sprites/cat_sprite.png"
   cols="8"
   rows="7"
-></desktop-pet>
+></web-sprite-pet>
 
 <script type="module">
-  import 'desktop-sprite-pet'
+  import 'web-sprite-pet'
 
   const pet = document.querySelector('#pet')
 
@@ -444,7 +444,7 @@ follow-distance
 hover-animation
 ```
 
-Other attributes are read during component initialization. If you need to change them, recreate the `<desktop-pet>` element.
+Other attributes are read during component initialization. If you need to change them, recreate the `<web-sprite-pet>` element.
 
 ## Positioning
 
@@ -477,17 +477,17 @@ The engine treats the pet coordinate as the bottom-center anchor of the sprite. 
 Add `follow-pointer` to move the pet toward the pointer:
 
 ```html
-<desktop-pet src="/sprites/cat_sprite.png" follow-pointer></desktop-pet>
+<web-sprite-pet src="/sprites/cat_sprite.png" follow-pointer></web-sprite-pet>
 ```
 
 Use `follow-distance` to keep space between the pet and the pointer:
 
 ```html
-<desktop-pet
+<web-sprite-pet
   src="/sprites/cat_sprite.png"
   follow-pointer
   follow-distance="48"
-></desktop-pet>
+></web-sprite-pet>
 ```
 
 When `interactive` is also enabled, pointer following pauses while the pointer is already over the pet. This prevents the pet from continuously moving away before hover or click can be triggered.
@@ -497,13 +497,13 @@ When `interactive` is also enabled, pointer following pauses while the pointer i
 Enable `interactive` to receive pointer events:
 
 ```html
-<desktop-pet
+<web-sprite-pet
   id="pet"
   src="/sprites/cat_sprite.png"
   interactive
   hover-animation="sleep"
   click-animation="roll"
-></desktop-pet>
+></web-sprite-pet>
 
 <script>
   const pet = document.querySelector('#pet')

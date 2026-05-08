@@ -25,18 +25,18 @@ const FREE_PET_POSITIONS = [
 ] as const
 const FLOOR_PET_POSITIONS = ['left', 'center', 'right'] as const
 
-export type DesktopPetCanvasSize = {
+export type WebSpritePetCanvasSize = {
   width: number
   height: number
   isFullscreen: boolean
 }
 
-export function readCanvasSize(element: HTMLElement): DesktopPetCanvasSize {
+export function readCanvasSize(element: HTMLElement): WebSpritePetCanvasSize {
   const hasCustomWidth = element.hasAttribute('width')
   const hasCustomHeight = element.hasAttribute('height')
   const isFullscreen = !hasCustomWidth && !hasCustomHeight
 
-  // 沒有指定 width/height 就走桌面寵物的預設模式：全螢幕透明 overlay
+  // 沒有指定 width/height 就走 web sprite pet 的預設模式：全螢幕透明 overlay
   return {
     width: isFullscreen
       ? window.innerWidth
@@ -114,7 +114,7 @@ export function readAnimationAttribute(
 
   if (!ANIMATION_NAMES.includes(value as AnimationName)) {
     console.warn(
-      `<desktop-pet> attribute "${name}" received unsupported value "${value}". ` +
+      `<web-sprite-pet> attribute "${name}" received unsupported value "${value}". ` +
         `Expected one of: ${ANIMATION_NAMES.join(', ')}.`,
     )
     return null
@@ -123,7 +123,7 @@ export function readAnimationAttribute(
   return value as AnimationName
 }
 
-export function createDesktopPetStyle(): HTMLStyleElement {
+export function createWebSpritePetStyle(): HTMLStyleElement {
   const style = document.createElement('style')
   style.textContent = `
     :host {

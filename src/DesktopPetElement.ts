@@ -1,7 +1,7 @@
 import { createPetEngine } from "./engine/petEngine";
 import { readNumberAttribute } from "./common/attributes";
 import {
-  createDesktopPetStyle,
+  createWebSpritePetStyle,
   readAnimationAttribute,
   readAnimations,
   readCanvasSize,
@@ -20,7 +20,7 @@ import type {
 
 const DEFAULT_PET_ID = 'default'
 
-export class DesktopPetElement extends HTMLElement {
+export class WebSpritePetElement extends HTMLElement {
   private readonly shadow: ShadowRoot
   private readonly canvas: HTMLCanvasElement
   private engine: PetEngine | null = null
@@ -32,7 +32,7 @@ export class DesktopPetElement extends HTMLElement {
 
     this.shadow = this.attachShadow({mode:'open'})
     this.canvas = document.createElement('canvas')
-    this.shadow.append(createDesktopPetStyle(), this.canvas)
+    this.shadow.append(createWebSpritePetStyle(), this.canvas)
   }
 
   get animations(): AnimationMap | null {
@@ -116,7 +116,7 @@ export class DesktopPetElement extends HTMLElement {
 
     // Sprite 圖片路徑是必要的，沒有的話 engine 會載不到圖
     const src = this.getAttribute('src') ?? ''
-    if(!src) console.warn('<desktop-pet> requires a "src" attribute.')
+    if(!src) console.warn('<web-sprite-pet> requires a "src" attribute.')
 
     // Sprite sheet 用幾欄幾列切圖，預設先走目前範例的 6x6
     const cols = readNumberAttribute(this, 'cols', 6, { min: 1, max: 99 })

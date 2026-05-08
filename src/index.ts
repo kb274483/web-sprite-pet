@@ -1,9 +1,14 @@
-import { DesktopPetElement } from './DesktopPetElement';
+import { WebSpritePetElement } from './DesktopPetElement';
 
-const elementName = 'desktop-pet';
+const elementName = 'web-sprite-pet';
+const legacyElementName = 'desktop-pet';
 
 if (!customElements.get(elementName)) {
-  customElements.define(elementName, DesktopPetElement);
+  customElements.define(elementName, WebSpritePetElement);
 }
 
-export { DesktopPetElement };
+if (!customElements.get(legacyElementName)) {
+  customElements.define(legacyElementName, WebSpritePetElement);
+}
+
+export { WebSpritePetElement, WebSpritePetElement as DesktopPetElement };

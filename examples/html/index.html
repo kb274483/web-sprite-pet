@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>desktop-pet HTML Example</title>
+    <title>web-sprite-pet HTML Example</title>
     <style>
       * {
         box-sizing: border-box;
@@ -36,9 +36,9 @@
   </head>
   <body>
     <main>
-      <h1>desktop-pet</h1>
-      <desktop-pet
-        id="desktop-pet"
+      <h1>web-sprite-pet</h1>
+      <web-sprite-pet
+        id="web-sprite-pet"
         src="assets/cat_sprite.png"
         scale="0.5"
         animation-speed="1"
@@ -52,13 +52,13 @@
         click-animation="roll"
         position="right"
         edge-padding="20"
-      ></desktop-pet>
+      ></web-sprite-pet>
     </main>
 
     <script type="module">
       import '/src/index.ts'
 
-      const pet = document.querySelector('#desktop-pet')
+      const pet = document.querySelector('#web-sprite-pet')
 
       pet?.addEventListener('pet-hover-start', (event) => {
         console.log('pet-hover-start', event.detail)
