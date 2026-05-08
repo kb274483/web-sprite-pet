@@ -7,6 +7,7 @@ const DIRECTION_EPSILON = 0.25
 const MIN_MOVEMENT_SPEED = 0.1
 const MAX_MOVEMENT_SPEED = 5
 
+// engine 裡的 pet 座標一律當 bottom-center，也就是角色腳底中間的位置
 export function createPetEngine(
   canvas: HTMLCanvasElement,
   options: PetEngineOptions,
@@ -21,6 +22,7 @@ export function createPetEngine(
   let lastTickTime = 0
   let movementSpeed = getClampedMovementSpeed(options.movementSpeed)
 
+  // 每隻 pet 都有自己的動畫、載圖、移動目標狀態；目前 Web Component 只暴露 default pet
   const petStates: PetState[] = options.pets.map((pet)=>({
     id: pet.id,
     config: pet,
@@ -94,6 +96,7 @@ export function createPetEngine(
   function resize(width:number, height:number): void{
     const ratio = window.devicePixelRatio || 1
 
+    // canvas 實際像素跟 CSS 尺寸分開設，避免高 DPI 螢幕看起來糊掉
     canvas.width = Math.round(width * ratio)
     canvas.height = Math.round(height * ratio)
     canvas.style.width = `${width}px`
@@ -106,6 +109,7 @@ export function createPetEngine(
     const state = petStates.find((pet)=> pet.id === id)
     if(!state) return
 
+    // 直接改 anchor 時也同步 target，避免 layout 更新後 pet 又慢慢滑回舊目標
     state.config.x = x
     state.config.y = y
     state.targetX = x
@@ -135,11 +139,13 @@ export function createPetEngine(
     const mode = playOptions.mode ?? 'hold'
 
     if (mode === 'once') {
+      // click 這類動畫播一次就好，播完後會回到 held 或 base animation
       state.oneShotAnimation = animation
       setAnimation(state, animation, true)
       return
     }
 
+    // hover 這類動畫會 hold 住，但不打斷正在播放的一次性動畫
     state.heldAnimation = animation
     if (!state.oneShotAnimation) {
       setAnimation(state, animation)
@@ -206,6 +212,7 @@ export function createPetEngine(
     const distance = Math.hypot(dx, dy)
 
     if (distance <= MOVEMENT_STOP_DISTANCE) {
+      // 已經夠接近目標就直接貼齊，避免最後一點點距離一直抖動
       state.config.x = target.x
       state.config.y = target.y
       setBaseAnimation(state, 'idle')
@@ -213,11 +220,13 @@ export function createPetEngine(
     }
 
     const responseMs = MOVEMENT_RESPONSE_MS / movementSpeed
+    // 用時間比例做平滑追蹤，不管 FPS 高低都會有接近的手感
     const movementFactor = 1 - Math.exp(-delta / responseMs)
     state.config.x += dx * movementFactor
     state.config.y += dy * movementFactor
 
     if (Math.abs(dx) > DIRECTION_EPSILON) {
+      // 只有水平移動夠明顯才翻方向，避免停下來附近一直左右跳
       state.config.direction = dx < 0 ? 'left' : 'right'
     }
 
@@ -231,6 +240,7 @@ export function createPetEngine(
 
     const { targetWidth, targetHeight } = getStateSize(state)
 
+    // target 先限制在可見範圍內，draw 階段還會再做一次安全 clamp
     return {
       x: clamp(
         state.targetX,
@@ -261,6 +271,7 @@ export function createPetEngine(
 
   function setBaseAnimation(state: PetState, animation: AnimationName): void {
     state.baseAnimation = animation
+    // held/one-shot 的優先序比 base 高，所以 base 只在沒有特殊動畫時才生效
     if (!state.heldAnimation && !state.oneShotAnimation) {
       setAnimation(state, animation)
     }
@@ -279,6 +290,7 @@ export function createPetEngine(
       state.frameElapsed -= frameDuration
 
       if (state.oneShotAnimation && state.frameIndex >= animation.frames - 1) {
+        // 一次性動畫播到最後一格後，回到 hover 動畫；沒有 hover 就回 idle/walk
         state.oneShotAnimation = null
         setAnimation(state, state.heldAnimation ?? state.baseAnimation)
         continue
@@ -302,6 +314,7 @@ export function createPetEngine(
       const sourceX = state.frameIndex * frameWidth
       const sourceY = animation.row * frameHeight
 
+      // draw 時再 clamp 一次，避免外部直接塞座標導致 sprite 畫出 canvas
       const anchorX = clamp(
         state.config.x,
         targetWidth / 2,
@@ -315,6 +328,7 @@ export function createPetEngine(
       const drawX = anchorX - targetWidth / 2
       const drawY = anchorY - targetHeight
 
+      // direction=left 用 canvas 翻轉，這樣不用另外準備一份反向 sprite
       const direction = state.config.direction ?? 'right'
   
       if (!ctx) return console.warn('Missing canvas element')
@@ -355,6 +369,7 @@ export function createPetEngine(
     }
 
     const scale = state.config.scale ?? 1
+    // 沒指定 frameWidth/frameHeight 時，就照 sprite sheet 的 cols/rows 自動切格
     const frameWidth = options.spriteSheet.frameWidth ?? state.image.width / options.spriteSheet.cols
     const frameHeight = options.spriteSheet.frameHeight ?? state.image.height / options.spriteSheet.rows
 
@@ -369,6 +384,7 @@ export function createPetEngine(
 
   function getStateBounds(state: PetState): PetBounds {
     const { targetWidth, targetHeight } = getStateSize(state)
+    // bounds 跟 draw 用同一套 bottom-center 座標，hit test 才不會跟畫面對不起來
     const anchorX = clamp(
       state.config.x,
       targetWidth / 2,

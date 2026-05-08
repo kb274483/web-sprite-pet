@@ -47,22 +47,27 @@ export class DesktopPetElement extends HTMLElement {
   connectedCallback():void{
     const { width, height } = this.readCanvasSize()
     this.syncResizeListener()
-    // 圖片路徑
+
+    // Sprite 圖片路徑是必要的，沒有的話 engine 會載不到圖
     const src = this.getAttribute('src') ?? ''
     if(!src) console.warn('<desktop-pet> requires a "src" attribute.')
-    // 圖片 Cols & Rows 分別是多少
+
+    // Sprite sheet 用幾欄幾列切圖，預設先走目前範例的 6x6
     const cols = readNumberAttribute(this, 'cols', 6, { min: 1, max: 99 })
     const rows = readNumberAttribute(this, 'rows', 6, { min: 1, max: 99 })
     const animations = this.readAnimations(rows)
-    // 圖片縮放比例
+
+    // 實際畫到 canvas 上的縮放比例
     const scale = readNumberAttribute(this, 'scale', 1, { min: 0.1, max: 10 })
-    // Sprite 動畫速度
+
+    // Sprite 換幀速度，movement 速度另外處理
     const animationSpeed = readNumberAttribute(this, 'animation-speed', 1, {
       min: 0.1,
       max: 10,
     })
     const movementSpeed = this.readMovementSpeed()
-    // Sprite 方向
+
+    // 初始面向，後續 follow-pointer 移動時 engine 可能會自動翻方向
     const direction = readStringAttribute(this, 'direction', 'right', PET_DIRECTIONS)
     const anchor = this.resolveCurrentAnchor(width, height)
 
@@ -86,6 +91,7 @@ export class DesktopPetElement extends HTMLElement {
       animationSpeed,
       movementSpeed,
       onPetLoad: () => {
+        // 圖片載入後才知道真正尺寸，所以要再算一次初始位置
         this.updateLayout()
       }
     });
@@ -142,6 +148,7 @@ export class DesktopPetElement extends HTMLElement {
     const { width, height } = this.readCanvasSize()
     const anchor = this.resolveCurrentAnchor(width, height)
   
+    // resize 和 anchor 一起更新，避免 viewport 變動後 pet 留在舊座標
     this.engine?.resize(width, height)
     this.engine?.setPetAnchor('default', anchor.x, anchor.y)
   }
@@ -149,6 +156,7 @@ export class DesktopPetElement extends HTMLElement {
   private syncResizeListener(): void {
     const { isFullscreen } = this.readCanvasSize()
 
+    // 只有全螢幕 overlay 需要跟著 window resize；inline 模式用固定尺寸
     if (isFullscreen) {
       window.addEventListener('resize', this.updateLayout)
     } else {
@@ -159,6 +167,7 @@ export class DesktopPetElement extends HTMLElement {
   private syncInteractionListeners(): void {
     const needsPointerMove = this.hasAttribute('interactive') || this.hasAttribute('follow-pointer')
 
+    // canvas 本身保持 pointer-events: none，所以互動要掛在 window 上做 hit test
     if (needsPointerMove) {
       window.addEventListener('pointermove', this.handlePointerMove)
     } else {
@@ -180,6 +189,7 @@ export class DesktopPetElement extends HTMLElement {
   }
 
   private handlePointerMove = (event: PointerEvent): void => {
+    // follow-pointer 和 hover 共用同一個 pointermove，先更新移動目標
     this.updateFollowTarget(event)
 
     if (!this.hasAttribute('interactive')) {
@@ -189,6 +199,7 @@ export class DesktopPetElement extends HTMLElement {
     const detail = this.readPetPointerEventDetail(event)
     if (!detail) {
       if (this.isHoveringPet) {
+        // 離開 pet 時要放掉 hover 動畫，控制權交回 movement 或 idle
         this.isHoveringPet = false
         this.engine?.clearHeldAnimation('default')
         const bounds = this.readViewportPetBounds()
@@ -207,6 +218,7 @@ export class DesktopPetElement extends HTMLElement {
     }
 
     if (!this.isHoveringPet) {
+      // hover-start 只在剛進入 pet 範圍時送一次，避免 pointermove 一直洗事件
       this.isHoveringPet = true
       this.playHoverAnimation()
       this.dispatchEvent(new CustomEvent('pet-hover-start', { detail }))
@@ -223,6 +235,7 @@ export class DesktopPetElement extends HTMLElement {
     const hasFloor = this.hasAttribute('floor')
     const floorOffset = readNumberAttribute(this, 'floor-offset', 24, { min: 0 })
     const targetX = event.clientX - canvasRect.left
+    // 有 floor 的時候只追 x，y 固定踩在地板上
     const targetY = hasFloor ? height - floorOffset : event.clientY - canvasRect.top
 
     this.engine?.setPetTarget('default', targetX, targetY)
@@ -234,6 +247,7 @@ export class DesktopPetElement extends HTMLElement {
       return
     }
 
+    // click animation 是一次性的，事件照樣交給外部使用者處理
     this.playClickAnimation()
     this.dispatchEvent(new CustomEvent('pet-click', { detail }))
   }
@@ -260,6 +274,7 @@ export class DesktopPetElement extends HTMLElement {
 
     const canvasRect = this.canvas.getBoundingClientRect()
 
+    // engine 回的是 canvas 內座標，事件 detail 要轉成 viewport 座標
     return {
       left: canvasRect.left + bounds.left,
       top: canvasRect.top + bounds.top,
@@ -277,6 +292,7 @@ export class DesktopPetElement extends HTMLElement {
     const position = this.readPosition(hasFloor)
     const petSize = this.engine?.getPetSize('default')
   
+    // 圖片還沒載入前尺寸未知，先用 0 讓 pet 可以初始化；載入後會再 updateLayout
     return resolvePetAnchor({
       position,
       canvasWidth: width,
@@ -294,6 +310,7 @@ export class DesktopPetElement extends HTMLElement {
     const hasCustomHeight = this.hasAttribute('height')
     const isFullscreen = !hasCustomWidth && !hasCustomHeight
 
+    // 沒有指定 width/height 就走桌面寵物的預設模式：全螢幕透明 overlay
     return {
       width: isFullscreen
         ? window.innerWidth
@@ -307,6 +324,7 @@ export class DesktopPetElement extends HTMLElement {
 
   private readPosition(hasFloor: boolean): FreePetPosition | FloorPetPosition{
     if(hasFloor){
+      // 有 floor 時 position 只控制水平位置，垂直位置交給 floor-offset
       return readStringAttribute(this, 'position', 'center', FLOOR_PET_POSITIONS)
     }
     return readStringAttribute(this, 'position', 'bottom-right', FREE_PET_POSITIONS)
@@ -314,6 +332,7 @@ export class DesktopPetElement extends HTMLElement {
 
   private readAnimations(rows: number): AnimationMap {
     const maxRow = Math.max(rows - 1, 0)
+    // 先支援最常用的 idle/walk row override，完整 animation map 留給 JS API
     const idleRow = readNumberAttribute(this, 'idle-row', defaultAnimations.idle.row, {
       min: 0,
       max: maxRow,
@@ -346,6 +365,7 @@ export class DesktopPetElement extends HTMLElement {
   private playHoverAnimation(): void {
     const animation = this.readAnimationAttribute('hover-animation')
     if (!animation) {
+      // hover-animation 沒設定時，hover 不應該卡住目前動畫
       this.engine?.clearHeldAnimation('default')
       return
     }
@@ -393,6 +413,9 @@ export class DesktopPetElement extends HTMLElement {
         background: transparent;
       }
 
+      /*
+        指定 width 或 height 就切回 inline 模式，方便放在範例或一般版面裡測試。
+      */
       :host([width]),
       :host([height]) {
         position: static;
