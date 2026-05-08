@@ -178,14 +178,19 @@ export class DesktopPetElement extends HTMLElement {
   }
 
   private handlePointerMove = (event: PointerEvent): void => {
-    // follow-pointer 和 hover 共用同一個 pointermove，先更新移動目標
-    this.updateFollowTarget(event)
+    const detail = this.hasAttribute('interactive')
+      ? this.readPetPointerEventDetail(event)
+      : null
+
+    // pointer 已經在 pet 上時先停住 follow target，避免 pet 持續退開讓 hover/click 失效
+    if (!detail) {
+      this.updateFollowTarget(event)
+    }
 
     if (!this.hasAttribute('interactive')) {
       return
     }
 
-    const detail = this.readPetPointerEventDetail(event)
     if (!detail) {
       if (this.isHoveringPet) {
         // 離開 pet 時要放掉 hover 動畫，控制權交回 movement 或 idle
