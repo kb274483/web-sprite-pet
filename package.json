@@ -1,6 +1,6 @@
 {
   "name": "web-sprite-pet",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A lightweight framework-agnostic web sprite pet Web Component rendered with canvas.",
   "type": "module",
   "main": "./dist/web-sprite-pet.umd.cjs",
