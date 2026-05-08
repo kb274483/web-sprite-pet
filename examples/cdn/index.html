@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>web-sprite-pet CDN Demo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background: #151515;
+        color: #f8fafc;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        display: grid;
+        gap: 12px;
+        justify-items: center;
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+
+      p {
+        margin: 0;
+        color: #cbd5e1;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>web-sprite-pet</h1>
+      <p>Move your pointer. Hover or click the pet.</p>
+      <web-sprite-pet
+        id="pet"
+        src="../html/assets/cat_sprite.png"
+        scale="0.5"
+        animation-speed="1"
+        movement-speed="0.5"
+        direction="left"
+        interactive
+        follow-pointer
+        follow-distance="40"
+        hover-animation="sleep"
+        click-animation="roll"
+        position="right"
+        edge-padding="20"
+      ></web-sprite-pet>
+    </main>
+
+    <script type="module">
+      import 'https://cdn.jsdelivr.net/npm/web-sprite-pet@0.1.0/dist/web-sprite-pet.js'
+
+      const pet = document.querySelector('#pet')
+
+      pet.addEventListener('pet-hover-start', (event) => {
+        console.log('pet-hover-start', event.detail)
+      })
+
+      pet.addEventListener('pet-hover-end', (event) => {
+        console.log('pet-hover-end', event.detail)
+      })
+
+      pet.addEventListener('pet-click', (event) => {
+        console.log('pet-click', event.detail)
+      })
+    </script>
+  </body>
+</html>
