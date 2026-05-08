@@ -1,5 +1,8 @@
 import { loadSprite } from './spriteLoader'
-import type { AnimationName, PetEngineOptions, PetState, PetEngine, PetSize, PetBounds, PlayAnimationOptions } from './types'
+import { clamp } from './math'
+import { setAnimation, setBaseAnimation, updateAnimationFrame } from './petAnimation'
+import { drawPets, getPetBounds as getStateBounds, getPetSize as getStateSize, resizeCanvas } from './petCanvas'
+import type { AnimationName, PetBounds, PetEngine, PetEngineOptions, PetSize, PetState, PlayAnimationOptions } from './types'
 
 const MOVEMENT_RESPONSE_MS = 120
 const MOVEMENT_STOP_DISTANCE = 0.75
@@ -13,10 +16,11 @@ export function createPetEngine(
   options: PetEngineOptions,
 ): PetEngine {
 
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
+  const canvasContext = canvas.getContext('2d');
+  if (!canvasContext) {
     throw new Error('Canvas 2D context is not available.');
   }
+  const ctx: CanvasRenderingContext2D = canvasContext
 
   let animationFrameId = 0
   let lastTickTime = 0
@@ -94,15 +98,7 @@ export function createPetEngine(
   }
 
   function resize(width:number, height:number): void{
-    const ratio = window.devicePixelRatio || 1
-
-    // canvas 實際像素跟 CSS 尺寸分開設，避免高 DPI 螢幕看起來糊掉
-    canvas.width = Math.round(width * ratio)
-    canvas.height = Math.round(height * ratio)
-    canvas.style.width = `${width}px`
-    canvas.style.height = `${height}px`
-
-    ctx?.setTransform(ratio, 0,0, ratio, 0,0,)
+    resizeCanvas(canvas, ctx, width, height)
   }
 
   function setPetAnchor(id: string, x: number, y: number): void{
@@ -168,7 +164,7 @@ export function createPetEngine(
       return null
     }
 
-    return getStateSize(state)
+    return getStateSize(state, options.spriteSheet)
   }
 
   function getPetBounds(id: string): PetBounds | null {
@@ -177,7 +173,10 @@ export function createPetEngine(
       return null
     }
 
-    return getStateBounds(state)
+    return getStateBounds(state, options.spriteSheet, {
+      width: canvas.clientWidth,
+      height: canvas.clientHeight,
+    })
   }
 
   function tick(time:number): void{
@@ -195,7 +194,7 @@ export function createPetEngine(
     for (const state of petStates) {
       updateMovement(state, delta)
 
-      updateAnimationFrame(state, delta, animationSpeed)
+      updateAnimationFrame(state, options.animations, delta, animationSpeed)
     }
   }
 
@@ -238,7 +237,7 @@ export function createPetEngine(
       return { x: state.targetX, y: state.targetY }
     }
 
-    const { targetWidth, targetHeight } = getStateSize(state)
+    const { targetWidth, targetHeight } = getStateSize(state, options.spriteSheet)
 
     // target 先限制在可見範圍內，draw 階段還會再做一次安全 clamp
     return {
@@ -255,164 +254,14 @@ export function createPetEngine(
     }
   }
 
-  function setAnimation(
-    state: PetState,
-    animation: PetState['animation'],
-    forceRestart = false,
-  ): void {
-    if (state.animation === animation && !forceRestart) {
-      return
-    }
-
-    state.animation = animation
-    state.frameIndex = 0
-    state.frameElapsed = 0
-  }
-
-  function setBaseAnimation(state: PetState, animation: AnimationName): void {
-    state.baseAnimation = animation
-    // held/one-shot 的優先序比 base 高，所以 base 只在沒有特殊動畫時才生效
-    if (!state.heldAnimation && !state.oneShotAnimation) {
-      setAnimation(state, animation)
-    }
-  }
-
-  function updateAnimationFrame(
-    state: PetState,
-    delta: number,
-    animationSpeed: number,
-  ): void {
-    const animation = options.animations[state.animation]
-    const frameDuration = animation.frameDuration / animationSpeed
-
-    state.frameElapsed += delta
-    while (state.frameElapsed >= frameDuration) {
-      state.frameElapsed -= frameDuration
-
-      if (state.oneShotAnimation && state.frameIndex >= animation.frames - 1) {
-        // 一次性動畫播到最後一格後，回到 hover 動畫；沒有 hover 就回 idle/walk
-        state.oneShotAnimation = null
-        setAnimation(state, state.heldAnimation ?? state.baseAnimation)
-        continue
-      }
-
-      state.frameIndex = (state.frameIndex + 1) % animation.frames
-    }
-  }
-
   function draw(): void {
-    ctx?.clearRect(0, 0, canvas.width, canvas.height)
-  
-    for (const state of petStates) {
-      if (!state.loaded || !state.image) {
-        continue
-      }
-  
-      const animation = options.animations[state.animation]
-      const { frameWidth, frameHeight, targetWidth, targetHeight } = getStateSize(state)
-
-      const sourceX = state.frameIndex * frameWidth
-      const sourceY = animation.row * frameHeight
-
-      // draw 時再 clamp 一次，避免外部直接塞座標導致 sprite 畫出 canvas
-      const anchorX = clamp(
-        state.config.x,
-        targetWidth / 2,
-        canvas.clientWidth - targetWidth / 2,
-      )
-      const anchorY = clamp(
-        state.config.y,
-        targetHeight,
-        canvas.clientHeight,
-      )
-      const drawX = anchorX - targetWidth / 2
-      const drawY = anchorY - targetHeight
-
-      // direction=left 用 canvas 翻轉，這樣不用另外準備一份反向 sprite
-      const direction = state.config.direction ?? 'right'
-  
-      if (!ctx) return console.warn('Missing canvas element')
-      if (direction === 'left') {
-        ctx.save()
-        ctx.scale(-1, 1)
-        ctx.drawImage(
-          state.image,
-          sourceX,
-          sourceY,
-          frameWidth,
-          frameHeight,
-          -drawX - targetWidth,
-          drawY,
-          targetWidth,
-          targetHeight,
-        )
-        ctx.restore()
-      } else {
-        ctx.drawImage(
-          state.image,
-          sourceX,
-          sourceY,
-          frameWidth,
-          frameHeight,
-          drawX,
-          drawY,
-          targetWidth,
-          targetHeight,
-        )
-      }      
-    }
-  }
-
-  function getStateSize(state: PetState): PetSize {
-    if (!state.image) {
-      throw new Error(`Cannot read size for unloaded pet: ${state.id}`)
-    }
-
-    const scale = state.config.scale ?? 1
-    // 沒指定 frameWidth/frameHeight 時，就照 sprite sheet 的 cols/rows 自動切格
-    const frameWidth = options.spriteSheet.frameWidth ?? state.image.width / options.spriteSheet.cols
-    const frameHeight = options.spriteSheet.frameHeight ?? state.image.height / options.spriteSheet.rows
-
-    return {
-      id: state.id,
-      frameWidth,
-      frameHeight,
-      targetWidth: frameWidth * scale,
-      targetHeight: frameHeight * scale,
-    }
-  }
-
-  function getStateBounds(state: PetState): PetBounds {
-    const { targetWidth, targetHeight } = getStateSize(state)
-    // bounds 跟 draw 用同一套 bottom-center 座標，hit test 才不會跟畫面對不起來
-    const anchorX = clamp(
-      state.config.x,
-      targetWidth / 2,
-      canvas.clientWidth - targetWidth / 2,
-    )
-    const anchorY = clamp(
-      state.config.y,
-      targetHeight,
-      canvas.clientHeight,
-    )
-
-    return {
-      id: state.id,
-      left: anchorX - targetWidth / 2,
-      top: anchorY - targetHeight,
-      right: anchorX + targetWidth / 2,
-      bottom: anchorY,
-      width: targetWidth,
-      height: targetHeight,
-    }
-  }
-
-  function clamp(value: number, min: number, max: number): number {
-    if (min > max) {
-      return (min + max) / 2
-    }
-
-    return Math.min(Math.max(value, min), max)
+    drawPets({
+      canvas,
+      ctx,
+      states: petStates,
+      spriteSheet: options.spriteSheet,
+      animations: options.animations,
+    })
   }
 
   function getClampedMovementSpeed(speed = 1): number {

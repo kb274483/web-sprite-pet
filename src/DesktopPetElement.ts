@@ -1,34 +1,23 @@
-import { defaultAnimations } from "./engine/animations";
 import { createPetEngine } from "./engine/petEngine";
-import { readNumberAttribute, readStringAttribute } from "./common/attributes";
+import { readNumberAttribute } from "./common/attributes";
+import {
+  createDesktopPetStyle,
+  readAnimationAttribute,
+  readAnimations,
+  readCanvasSize,
+  readDirection,
+  readFollowDistance,
+  readMovementSpeed,
+  readPosition,
+} from "./DesktopPetElement.config";
 import { resolvePetAnchor } from "./engine/position";
 import type { 
-  AnimationName,
-  AnimationMap, 
   PetEngine, 
-  FreePetPosition, 
-  FloorPetPosition, 
   PetPointerEventDetail, 
   PetPointerBounds 
 } from "./engine/types";
 
-const DEFAULT_CANVAS_WIDTH = 240
-const DEFAULT_CANVAS_HEIGHT = 180
-const ANIMATION_NAMES = ['idle', 'walk', 'run', 'sleep', 'jump', 'roll', 'attack'] as const
-const PET_DIRECTIONS = ['left', 'right'] as const
-const FREE_PET_POSITIONS = [
-  'top-left',
-  'top',
-  'top-right',
-  'left',
-  'center',
-  'right',
-  'bottom-left',
-  'bottom',
-  'bottom-right',
-] as const
-
-const FLOOR_PET_POSITIONS = ['left', 'center', 'right'] as const
+const DEFAULT_PET_ID = 'default'
 
 export class DesktopPetElement extends HTMLElement {
   private readonly shadow: ShadowRoot
@@ -41,11 +30,11 @@ export class DesktopPetElement extends HTMLElement {
 
     this.shadow = this.attachShadow({mode:'open'})
     this.canvas = document.createElement('canvas')
-    this.shadow.append(this.createStyle(), this.canvas)
+    this.shadow.append(createDesktopPetStyle(), this.canvas)
   }
 
   connectedCallback():void{
-    const { width, height } = this.readCanvasSize()
+    const { width, height } = readCanvasSize(this)
     this.syncResizeListener()
 
     // Sprite 圖片路徑是必要的，沒有的話 engine 會載不到圖
@@ -55,7 +44,7 @@ export class DesktopPetElement extends HTMLElement {
     // Sprite sheet 用幾欄幾列切圖，預設先走目前範例的 6x6
     const cols = readNumberAttribute(this, 'cols', 6, { min: 1, max: 99 })
     const rows = readNumberAttribute(this, 'rows', 6, { min: 1, max: 99 })
-    const animations = this.readAnimations(rows)
+    const animations = readAnimations(this, rows)
 
     // 實際畫到 canvas 上的縮放比例
     const scale = readNumberAttribute(this, 'scale', 1, { min: 0.1, max: 10 })
@@ -65,16 +54,16 @@ export class DesktopPetElement extends HTMLElement {
       min: 0.1,
       max: 10,
     })
-    const movementSpeed = this.readMovementSpeed()
+    const movementSpeed = readMovementSpeed(this)
 
     // 初始面向，後續 follow-pointer 移動時 engine 可能會自動翻方向
-    const direction = readStringAttribute(this, 'direction', 'right', PET_DIRECTIONS)
+    const direction = readDirection(this)
     const anchor = this.resolveCurrentAnchor(width, height)
 
     this.engine = createPetEngine(this.canvas, {
       pets: [
         {
-          id: 'default',
+          id: DEFAULT_PET_ID,
           name: 'Default Pet',
           src,
           x: anchor.x,
@@ -145,16 +134,16 @@ export class DesktopPetElement extends HTMLElement {
   }
 
   private updateLayout = (): void => {
-    const { width, height } = this.readCanvasSize()
+    const { width, height } = readCanvasSize(this)
     const anchor = this.resolveCurrentAnchor(width, height)
   
     // resize 和 anchor 一起更新，避免 viewport 變動後 pet 留在舊座標
     this.engine?.resize(width, height)
-    this.engine?.setPetAnchor('default', anchor.x, anchor.y)
+    this.engine?.setPetAnchor(DEFAULT_PET_ID, anchor.x, anchor.y)
   }
 
   private syncResizeListener(): void {
-    const { isFullscreen } = this.readCanvasSize()
+    const { isFullscreen } = readCanvasSize(this)
 
     // 只有全螢幕 overlay 需要跟著 window resize；inline 模式用固定尺寸
     if (isFullscreen) {
@@ -180,12 +169,12 @@ export class DesktopPetElement extends HTMLElement {
     } else {
       window.removeEventListener('click', this.handleClick)
       this.isHoveringPet = false
-      this.engine?.clearHeldAnimation('default')
+      this.engine?.clearHeldAnimation(DEFAULT_PET_ID)
     }
   }
 
   private syncMovementSpeed(): void {
-    this.engine?.setMovementSpeed(this.readMovementSpeed())
+    this.engine?.setMovementSpeed(readMovementSpeed(this))
   }
 
   private handlePointerMove = (event: PointerEvent): void => {
@@ -201,12 +190,12 @@ export class DesktopPetElement extends HTMLElement {
       if (this.isHoveringPet) {
         // 離開 pet 時要放掉 hover 動畫，控制權交回 movement 或 idle
         this.isHoveringPet = false
-        this.engine?.clearHeldAnimation('default')
+        this.engine?.clearHeldAnimation(DEFAULT_PET_ID)
         const bounds = this.readViewportPetBounds()
         if (bounds) {
           this.dispatchEvent(new CustomEvent('pet-hover-end', {
             detail: {
-              id: 'default',
+              id: DEFAULT_PET_ID,
               pointerX: event.clientX,
               pointerY: event.clientY,
               bounds,
@@ -231,14 +220,19 @@ export class DesktopPetElement extends HTMLElement {
     }
 
     const canvasRect = this.canvas.getBoundingClientRect()
-    const { height } = this.readCanvasSize()
+    const { height } = readCanvasSize(this)
     const hasFloor = this.hasAttribute('floor')
     const floorOffset = readNumberAttribute(this, 'floor-offset', 24, { min: 0 })
-    const targetX = event.clientX - canvasRect.left
+    const pointerX = event.clientX - canvasRect.left
     // 有 floor 的時候只追 x，y 固定踩在地板上
-    const targetY = hasFloor ? height - floorOffset : event.clientY - canvasRect.top
+    const pointerY = hasFloor ? height - floorOffset : event.clientY - canvasRect.top
+    const target = this.resolveFollowTarget(event, canvasRect, {
+      x: pointerX,
+      y: pointerY,
+      hasFloor,
+    })
 
-    this.engine?.setPetTarget('default', targetX, targetY)
+    this.engine?.setPetTarget(DEFAULT_PET_ID, target.x, target.y)
   }
 
   private handleClick = (event: MouseEvent): void => {
@@ -259,7 +253,7 @@ export class DesktopPetElement extends HTMLElement {
     }
 
     return {
-      id: 'default',
+      id: DEFAULT_PET_ID,
       pointerX: event.clientX,
       pointerY: event.clientY,
       bounds,
@@ -267,7 +261,7 @@ export class DesktopPetElement extends HTMLElement {
   }
 
   private readViewportPetBounds(): PetPointerBounds | null {
-    const bounds = this.engine?.getPetBounds('default')
+    const bounds = this.engine?.getPetBounds(DEFAULT_PET_ID)
     if (!bounds) {
       return null
     }
@@ -289,8 +283,8 @@ export class DesktopPetElement extends HTMLElement {
     const hasFloor = this.hasAttribute('floor')
     const floorOffset = readNumberAttribute(this, 'floor-offset', 24, { min: 0 })
     const edgePadding = readNumberAttribute(this, 'edge-padding', 24, { min: 0 })
-    const position = this.readPosition(hasFloor)
-    const petSize = this.engine?.getPetSize('default')
+    const position = readPosition(this, hasFloor)
+    const petSize = this.engine?.getPetSize(DEFAULT_PET_ID)
   
     // 圖片還沒載入前尺寸未知，先用 0 讓 pet 可以初始化；載入後會再 updateLayout
     return resolvePetAnchor({
@@ -305,133 +299,69 @@ export class DesktopPetElement extends HTMLElement {
     })
   }
 
-  private readCanvasSize(): { width: number; height: number; isFullscreen: boolean } {
-    const hasCustomWidth = this.hasAttribute('width')
-    const hasCustomHeight = this.hasAttribute('height')
-    const isFullscreen = !hasCustomWidth && !hasCustomHeight
-
-    // 沒有指定 width/height 就走桌面寵物的預設模式：全螢幕透明 overlay
-    return {
-      width: isFullscreen
-        ? window.innerWidth
-        : readNumberAttribute(this, 'width', DEFAULT_CANVAS_WIDTH, { min: 1 }),
-      height: isFullscreen
-        ? window.innerHeight
-        : readNumberAttribute(this, 'height', DEFAULT_CANVAS_HEIGHT, { min: 1 }),
-      isFullscreen,
+  private resolveFollowTarget(
+    event: PointerEvent,
+    canvasRect: DOMRect,
+    pointer: { x: number; y: number; hasFloor: boolean },
+  ): { x: number; y: number } {
+    const followDistance = readFollowDistance(this)
+    if (followDistance <= 0) {
+      return { x: pointer.x, y: pointer.y }
     }
-  }
 
-  private readPosition(hasFloor: boolean): FreePetPosition | FloorPetPosition{
-    if(hasFloor){
-      // 有 floor 時 position 只控制水平位置，垂直位置交給 floor-offset
-      return readStringAttribute(this, 'position', 'center', FLOOR_PET_POSITIONS)
+    const pointerViewportY = pointer.hasFloor ? canvasRect.top + pointer.y : event.clientY
+    const petAnchor = this.readViewportPetAnchor()
+    if (!petAnchor) {
+      return {
+        x: pointer.x - followDistance,
+        y: pointer.y,
+      }
     }
-    return readStringAttribute(this, 'position', 'bottom-right', FREE_PET_POSITIONS)
-  }
 
-  private readAnimations(rows: number): AnimationMap {
-    const maxRow = Math.max(rows - 1, 0)
-    // 先支援最常用的 idle/walk row override，完整 animation map 留給 JS API
-    const idleRow = readNumberAttribute(this, 'idle-row', defaultAnimations.idle.row, {
-      min: 0,
-      max: maxRow,
-    })
-    const walkRow = readNumberAttribute(this, 'walk-row', defaultAnimations.walk.row, {
-      min: 0,
-      max: maxRow,
-    })
+    const offsetX = petAnchor.x - event.clientX
+    const offsetY = pointer.hasFloor ? 0 : petAnchor.y - pointerViewportY
+    const distance = Math.hypot(offsetX, offsetY)
+    const unitX = distance > 0.001 ? offsetX / distance : -1
+    const unitY = distance > 0.001 ? offsetY / distance : 0
 
     return {
-      ...defaultAnimations,
-      idle: {
-        ...defaultAnimations.idle,
-        row: idleRow,
-      },
-      walk: {
-        ...defaultAnimations.walk,
-        row: walkRow,
-      },
+      x: event.clientX + unitX * followDistance - canvasRect.left,
+      y: pointer.hasFloor
+        ? pointer.y
+        : event.clientY + unitY * followDistance - canvasRect.top,
     }
   }
 
-  private readMovementSpeed(): number {
-    return readNumberAttribute(this, 'movement-speed', 1, {
-      min: 0.1,
-      max: 5,
-    })
+  private readViewportPetAnchor(): { x: number; y: number } | null {
+    const bounds = this.readViewportPetBounds()
+    if (!bounds) {
+      return null
+    }
+
+    return {
+      x: bounds.left + bounds.width / 2,
+      y: bounds.bottom,
+    }
   }
 
   private playHoverAnimation(): void {
-    const animation = this.readAnimationAttribute('hover-animation')
+    const animation = readAnimationAttribute(this, 'hover-animation')
     if (!animation) {
       // hover-animation 沒設定時，hover 不應該卡住目前動畫
-      this.engine?.clearHeldAnimation('default')
+      this.engine?.clearHeldAnimation(DEFAULT_PET_ID)
       return
     }
 
-    this.engine?.playAnimation('default', animation, { mode: 'hold' })
+    this.engine?.playAnimation(DEFAULT_PET_ID, animation, { mode: 'hold' })
   }
 
   private playClickAnimation(): void {
-    const animation = this.readAnimationAttribute('click-animation')
+    const animation = readAnimationAttribute(this, 'click-animation')
     if (!animation) {
       return
     }
 
-    this.engine?.playAnimation('default', animation, { mode: 'once' })
-  }
-
-  private readAnimationAttribute(name: string): AnimationName | null {
-    const value = this.getAttribute(name)
-    if (value === null) {
-      return null
-    }
-
-    if (!ANIMATION_NAMES.includes(value as AnimationName)) {
-      console.warn(
-        `<desktop-pet> attribute "${name}" received unsupported value "${value}". ` +
-        `Expected one of: ${ANIMATION_NAMES.join(', ')}.`
-      )
-      return null
-    }
-
-    return value as AnimationName
-  }
-
-  private createStyle(): HTMLStyleElement {
-    const style = document.createElement('style');
-    style.textContent = `
-      :host {
-        position: fixed;
-        inset: 0;
-        width: 100vw;
-        height: 100vh;
-        pointer-events: none;
-        z-index: 2147483647;
-        line-height: 0;
-        background: transparent;
-      }
-
-      /*
-        指定 width 或 height 就切回 inline 模式，方便放在範例或一般版面裡測試。
-      */
-      :host([width]),
-      :host([height]) {
-        position: static;
-        inset: auto;
-        display: inline-block;
-        width: fit-content;
-        height: fit-content;
-        z-index: auto;
-      }
-
-      canvas {
-        display: block;
-        background: transparent;
-      }
-    `;
-    return style;
+    this.engine?.playAnimation(DEFAULT_PET_ID, animation, { mode: 'once' })
   }
 }
 
